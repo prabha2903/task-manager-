@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaskFlow — Tasks</title>
+</head>
+<body>
+<div class="app-layout">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="topbar-mount"></div>
+    <div class="page-content">
+
+      <!-- Filter Bar -->
+      <div class="filter-bar">
+        <div class="search-input-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="filter-title" class="form-control" placeholder="Search tasks by title…" />
+        </div>
+        <select id="filter-status" class="form-select" style="width:155px;flex:none">
+          <option value="">All Status</option>
+          <option value="TODO">Todo</option>
+          <option value="IN_PROGRESS">In Progress</option>
+          <option value="DONE">Done</option>
+        </select>
+        <select id="filter-priority" class="form-select" style="width:155px;flex:none">
+          <option value="">All Priority</option>
+          <option value="LOW">🟢 Low</option>
+          <option value="MEDIUM">🟠 Medium</option>
+          <option value="HIGH">🔴 High</option>
+        </select>
+        <select id="filter-user" class="form-select" style="width:155px;flex:none">
+          <option value="">All Users</option>
+        </select>
+        <button class="btn btn-primary" id="new-task-btn" style="flex:none;white-space:nowrap">+ New Task</button>
+      </div>
+
+      <!-- Table -->
+      <div class="card">
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Status</th>
+                <th>Priority</th>
+                <th>Assigned To</th>
+                <th>Due Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tasks-tbody">
+              <tr><td colspan="6"><div class="loading-spinner" style="justify-content:center"><div class="spinner"></div> Loading…</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="pagination-wrap" class="pagination-wrap"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Task Modal -->
+<div class="modal fade" id="task-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modal-title">New Task</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="form-id" />
+
+        <div class="mb-3">
+          <label class="form-label">Title <span style="color:var(--accent-red)">*</span></label>
+          <input type="text" id="form-title" class="form-control" placeholder="Task title" />
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Description</label>
+          <textarea id="form-description" class="form-control" rows="3" placeholder="Describe the task…"></textarea>
+        </div>
+        <div class="mb-3" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label class="form-label">Priority</label>
+            <select id="form-priority" class="form-select">
+              <option value="LOW">🟢 Low</option>
+              <option value="MEDIUM" selected>🟠 Medium</option>
+              <option value="HIGH">🔴 High</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Status</label>
+            <select id="form-status" class="form-select">
+              <option value="TODO" selected>Todo</option>
+              <option value="IN_PROGRESS">In Progress</option>
+              <option value="DONE">Done</option>
+            </select>
+          </div>
+        </div>
+        <div class="mb-3" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label class="form-label">Due Date</label>
+            <input type="date" id="form-duedate" class="form-control" />
+          </div>
+          <div>
+            <label class="form-label">Assign To</label>
+            <select id="form-assignee" class="form-select">
+              <option value="">Unassigned</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="save-task-btn">Save Task</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/shell.js"></script>
+<script src="js/api.js"></script>
+<script src="js/toast.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/notifications.js"></script>
+
+<!-- Bootstrap JS (needed for modal) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  if (!initPage('tasks', 'Tasks')) { throw new Error('Not authenticated'); }
+
+  // ── State ──────────────────────────────────────────────
+  var State = { page:0, size:10, totalPages:0, totalElements:0, filters:{title:'',status:'',priority:'',assignedUserId:''}, users:[], editingId:null };
+
+  // ── Init ───────────────────────────────────────────────
+  async function initTasks() {
+    await loadUsers();
+    await loadTasks();
+    bindFilters();
+
+    document.getElementById('new-task-btn').addEventListener('click', openCreateModal);
+    document.getElementById('save-task-btn').addEventListener('click', saveTask);
+  }
+
+  function bindFilters() {
+    var titleInput = document.getElementById('filter-title');
+    titleInput.addEventListener('input', debounce(function(){
+      State.filters.title = titleInput.value.trim();
+      State.page = 0;
+      loadTasks();
+    }, 400));
+
+    ['filter-status','filter-priority','filter-user'].forEach(function(id) {
+      document.getElementById(id).addEventListener('change', function() {
+        if (id === 'filter-status')   State.filters.status = this.value;
+        if (id === 'filter-priority') State.filters.priority = this.value;
+        if (id === 'filter-user')     State.filters.assignedUserId = this.value;
+        State.page = 0;
+        loadTasks();
+      });
+    });
+  }
+
+  // ── Users ──────────────────────────────────────────────
+  async function loadUsers() {
+    var data = await Api.getUsers();
+    State.users = data || [];
+    var opts = State.users.map(function(u){ return '<option value="'+u.id+'">'+_esc(u.name)+'</option>'; }).join('');
+    document.getElementById('filter-user').innerHTML   = '<option value="">All Users</option>' + opts;
+    document.getElementById('form-assignee').innerHTML = '<option value="">Unassigned</option>' + opts;
+  }
+
+  // ── Load & Render Tasks ────────────────────────────────
+  async function loadTasks() {
+    var tbody = document.getElementById('tasks-tbody');
+    tbody.innerHTML = '<tr><td colspan="6"><div class="loading-spinner" style="justify-content:center"><div class="spinner"></div> Loading…</div></td></tr>';
+
+    var params = { page: State.page, size: State.size };
+    if (State.filters.title)          params.title          = State.filters.title;
+    if (State.filters.status)         params.status         = State.filters.status;
+    if (State.filters.priority)       params.priority       = State.filters.priority;
+    if (State.filters.assignedUserId) params.assignedUserId = State.filters.assignedUserId;
+
+    var data = await Api.getTasks(params);
+    if (!data) { tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon">❌</div><h6>Failed to load tasks</h6></div></td></tr>'; return; }
+
+    var tasks = data.content || (Array.isArray(data) ? data : []);
+    State.totalPages    = data.totalPages    || 1;
+    State.totalElements = data.totalElements || tasks.length;
+
+    if (!tasks.length) {
+      tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon">📭</div><h6>No tasks found</h6><p>Try adjusting your filters or create a new task.</p></div></td></tr>';
+    } else {
+      tbody.innerHTML = tasks.map(renderRow).join('');
+    }
+    renderPagination();
+  }
+
+  function renderRow(t) {
+    var overdue = isOverdue(t.dueDate);
+    return '<tr>' +
+      '<td><a href="task-detail.html?id='+t.id+'" style="color:var(--text-primary);text-decoration:none;font-weight:500;max-width:220px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+_esc(t.title)+'">'+_esc(t.title)+'</a></td>'+
+      '<td>'+statusBadge(t.status)+'</td>'+
+      '<td>'+priorityBadge(t.priority)+'</td>'+
+      '<td style="color:var(--text-secondary);font-size:13px">'+_esc((t.assignedUser&&t.assignedUser.name)||(t.assignedTo&&t.assignedTo.name)||'—')+'</td>'+
+      '<td><span style="font-size:12px;'+(overdue?'color:var(--accent-red);font-weight:600':'color:var(--text-muted)')+'">'+
+        (overdue?'⚠️ ':'')+formatDate(t.dueDate)+'</span></td>'+
+      '<td><div style="display:flex;gap:6px">'+
+        '<a href="task-detail.html?id='+t.id+'" class="btn btn-secondary btn-sm" title="View">👁</a>'+
+        '<button class="btn btn-secondary btn-sm" onclick="openEditModal('+t.id+')" title="Edit">✏️</button>'+
+        '<button class="btn btn-danger btn-sm" onclick="deleteTask('+t.id+')" title="Delete">🗑</button>'+
+      '</div></td>'+
+      '</tr>';
+  }
+
+  function renderPagination() {
+    var wrap = document.getElementById('pagination-wrap');
+    var from = State.totalElements === 0 ? 0 : State.page * State.size + 1;
+    var to   = Math.min((State.page + 1) * State.size, State.totalElements);
+
+    var startPage = Math.max(0, State.page - 2);
+    var endPage   = Math.min(State.totalPages - 1, startPage + 4);
+    if (endPage - startPage < 4) startPage = Math.max(0, endPage - 4);
+
+    var pages = '';
+    for (var i = startPage; i <= endPage; i++) {
+      pages += '<button class="page-btn '+(i===State.page?'active':'')+'" onclick="goToPage('+i+')">'+(i+1)+'</button>';
+    }
+
+    wrap.innerHTML =
+      '<div class="pagination-info">Showing '+from+'–'+to+' of '+State.totalElements+' tasks</div>'+
+      '<div class="pagination-controls">'+
+        '<button class="page-btn" onclick="goToPage(0)" '+(State.page===0?'disabled':'')+' title="First">«</button>'+
+        '<button class="page-btn" onclick="goToPage('+(State.page-1)+')" '+(State.page===0?'disabled':'')+' title="Prev">‹</button>'+
+        pages+
+        '<button class="page-btn" onclick="goToPage('+(State.page+1)+')" '+(State.page>=State.totalPages-1?'disabled':'')+' title="Next">›</button>'+
+        '<button class="page-btn" onclick="goToPage('+(State.totalPages-1)+')" '+(State.page>=State.totalPages-1?'disabled':'')+' title="Last">»</button>'+
+      '</div>';
+  }
+
+  function goToPage(p) {
+    if (p < 0 || p >= State.totalPages) return;
+    State.page = p;
+    loadTasks();
+  }
+
+  // ── Modal ──────────────────────────────────────────────
+  function getModal() {
+    return bootstrap.Modal.getOrCreateInstance(document.getElementById('task-modal'));
+  }
+
+  function openCreateModal() {
+    State.editingId = null;
+    document.getElementById('modal-title').textContent = '+ New Task';
+    document.getElementById('form-id').value = '';
+    document.getElementById('form-title').value = '';
+    document.getElementById('form-description').value = '';
+    document.getElementById('form-priority').value = 'MEDIUM';
+    document.getElementById('form-status').value = 'TODO';
+    document.getElementById('form-duedate').value = '';
+    document.getElementById('form-assignee').value = '';
+    getModal().show();
+  }
+
+  async function openEditModal(id) {
+    State.editingId = id;
+    document.getElementById('modal-title').textContent = 'Edit Task';
+    var task = await Api.getTask(id);
+    if (!task) return;
+    document.getElementById('form-id').value = task.id;
+    document.getElementById('form-title').value = task.title || '';
+    document.getElementById('form-description').value = task.description || '';
+    document.getElementById('form-priority').value = task.priority || 'MEDIUM';
+    document.getElementById('form-status').value = task.status || 'TODO';
+    document.getElementById('form-duedate').value = task.dueDate ? task.dueDate.slice(0,10) : '';
+    var assignEl = document.getElementById('form-assignee');
+    assignEl.value = (task.assignedUser && task.assignedUser.id) || (task.assignedTo && task.assignedTo.id) || '';
+    getModal().show();
+  }
+
+async function saveTask() {
+
+  var id = document.getElementById('form-id').value; // ✅ FIX
+
+  var title = document.getElementById('form-title').value.trim();
+  var description = document.getElementById('form-description').value;
+  var priority = document.getElementById('form-priority').value;
+  var status = document.getElementById('form-status').value;
+  var dueDate = document.getElementById('form-duedate').value;
+
+  var userVal = document.getElementById('form-assignee').value;
+
+  if (!title) {
+    Toast.error('Task title is required.');
+    return;
+  }
+
+  const payload = {
+    title,
+    description,
+    priority,
+    status,
+    dueDate,
+    assignedUserId: userVal ? parseInt(userVal) : null,
+    projectId: 1 // TEMP
+  };
+
+  console.log("🚀 Sending payload:", payload);
+
+  var btn = document.getElementById('save-task-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  var result = id
+    ? await Api.updateTask(id, payload)
+    : await Api.createTask(payload);
+
+  btn.disabled = false;
+  btn.textContent = 'Save Task';
+
+  if (result) {
+    Toast.success(id ? 'Task updated!' : 'Task created!');
+    getModal().hide();
+    loadTasks();
+  }
+}
+  async function deleteTask(id) {
+    if (!confirmAction('Delete this task? This cannot be undone.')) return;
+    var result = await Api.deleteTask(id);
+    if (result) { Toast.success('Task deleted.'); loadTasks(); }
+  }
+
+  // Expose for onclick handlers in table rows
+  window.openEditModal = openEditModal;
+  window.deleteTask    = deleteTask;
+  window.goToPage      = goToPage;
+
+  initTasks();
+</script>
+</body>
+</html>

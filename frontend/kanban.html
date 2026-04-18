@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaskFlow — Kanban</title>
+</head>
+<body>
+<div class="app-layout">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="topbar-mount"></div>
+    <div class="page-content">
+      <div id="kanban-board" class="kanban-board">
+        <div class="loading-spinner" style="padding:60px"><div class="spinner"></div> Loading board…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick view modal -->
+<div class="modal fade" id="task-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modal-title">Task</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <a id="modal-link" href="#" class="btn btn-primary">View Full Task →</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/shell.js"></script>
+<script src="js/api.js"></script>
+<script src="js/toast.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/notifications.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+  if (!initPage('kanban', 'Kanban Board')) { throw new Error('Not authenticated'); }
+
+  var COLS = [
+    { id: 'TODO',        label: '⬜ Todo',        color: '#8b949e' },
+    { id: 'IN_PROGRESS', label: '🔵 In Progress',  color: '#388bfd' },
+    { id: 'DONE',        label: '✅ Done',          color: '#3fb950' },
+  ];
+
+  var allTasks = [];
+
+  async function loadKanban() {
+    var data = await Api.getTasks({ size: 200 });
+    allTasks = data ? (data.content || (Array.isArray(data) ? data : [])) : [];
+    renderBoard();
+  }
+
+  function renderBoard() {
+    var board = document.getElementById('kanban-board');
+    board.innerHTML = COLS.map(function(col) {
+      var tasks = allTasks.filter(function(t){ return t.status === col.id; });
+      var cardsHtml = tasks.length
+        ? tasks.map(renderCard).join('')
+        : '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;border:1px dashed var(--border-color);border-radius:8px">Drop tasks here</div>';
+
+      return '<div class="kanban-col">'+
+        '<div class="kanban-col-header">'+
+          '<span><span class="col-indicator" style="background:'+col.color+'"></span>'+col.label+'</span>'+
+          '<span class="kanban-col-count" id="cnt-'+col.id+'">'+tasks.length+'</span>'+
+        '</div>'+
+        '<div class="kanban-cards" id="col-'+col.id+'" data-status="'+col.id+'">'+cardsHtml+'</div>'+
+      '</div>';
+    }).join('');
+
+    // Init drag-and-drop if SortableJS loaded
+    if (typeof Sortable !== 'undefined') {
+      COLS.forEach(function(col) {
+        var el = document.getElementById('col-'+col.id);
+        if (!el) return;
+        Sortable.create(el, {
+          group: 'kanban',
+          animation: 150,
+          draggable: '.kanban-card',
+          onEnd: async function(evt) {
+            var taskId    = evt.item.dataset.id;
+            var newStatus = evt.to.dataset.status;
+            var oldStatus = evt.from.dataset.status;
+            if (newStatus === oldStatus) return;
+
+            // Optimistic
+            var t = allTasks.find(function(x){ return String(x.id) === String(taskId); });
+            if (t) t.status = newStatus;
+            updateCount(oldStatus);
+            updateCount(newStatus);
+
+            var result = await Api.updateTaskStatus(taskId, newStatus);
+            if (!result) {
+              if (t) t.status = oldStatus;
+              renderBoard();
+              Toast.error('Failed to update status.');
+            } else {
+              Toast.success('Moved to ' + newStatus.replace('_',' '));
+            }
+          }
+        });
+      });
+    }
+  }
+
+  function renderCard(task) {
+    return '<div class="kanban-card" data-id="'+task.id+'" onclick="openCard('+task.id+')">'+
+      '<div class="kanban-card-title">'+_esc(task.title)+'</div>'+
+      '<div class="kanban-card-meta">'+
+        priorityBadge(task.priority)+
+        (task.dueDate ? '<span style="font-size:11px;color:'+(isOverdue(task.dueDate)?'var(--accent-red)':'var(--text-muted)')+'">📅 '+formatDate(task.dueDate)+'</span>' : '')+
+        (task.assignedUser&&task.assignedUser.name ? '<span style="font-size:11px;color:var(--text-muted)">👤 '+_esc(task.assignedUser.name)+'</span>' : '')+
+      '</div>'+
+    '</div>';
+  }
+
+  function updateCount(status) {
+    var el = document.getElementById('cnt-'+status);
+    if (!el) return;
+    var col = document.getElementById('col-'+status);
+    if (col) el.textContent = col.querySelectorAll('.kanban-card').length;
+  }
+
+  function openCard(id) {
+    var task = allTasks.find(function(t){ return t.id === id; });
+    if (!task) return;
+    document.getElementById('modal-title').textContent = task.title;
+    document.getElementById('modal-link').href = 'task-detail.html?id='+id;
+    document.getElementById('modal-body').innerHTML =
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">'+
+        statusBadge(task.status)+priorityBadge(task.priority)+
+        (task.dueDate ? '<span class="task-meta-item">📅 '+formatDate(task.dueDate)+'</span>' : '')+
+      '</div>'+
+      (task.description ? '<p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">'+_esc(task.description)+'</p>' : '')+
+      '<div style="font-size:13px;color:var(--text-secondary)"><strong>Assigned to:</strong> '+
+        _esc((task.assignedUser&&task.assignedUser.name)||(task.assignedTo&&task.assignedTo.name)||'Unassigned')+
+      '</div>';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('task-modal')).show();
+  }
+
+  window.openCard = openCard;
+
+  loadKanban();
+</script>
+</body>
+</html>

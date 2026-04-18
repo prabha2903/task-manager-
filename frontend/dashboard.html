@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaskFlow — Dashboard</title>
+  <!--
+    NOTE: CSS and Bootstrap are injected by shell.js below.
+    All script paths are relative to THIS file's location.
+    Make sure your folder looks like:
+      taskflow/
+        index.html
+        dashboard.html   ← this file
+        css/style.css
+        js/shell.js
+        js/api.js  ...etc
+  -->
+</head>
+<body>
+<div class="app-layout">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="topbar-mount"></div>
+    <div class="page-content">
+
+      <!-- Stat Cards -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:24px">
+        <div class="stat-card blue">
+          <div class="stat-icon blue">📊</div>
+          <div class="stat-value" id="stat-total">—</div>
+          <div class="stat-label">Total Tasks</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon green">✅</div>
+          <div class="stat-value" id="stat-done">—</div>
+          <div class="stat-label">Completed</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-icon orange">⏳</div>
+          <div class="stat-value" id="stat-pending">—</div>
+          <div class="stat-label">Pending</div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-icon purple">👤</div>
+          <div class="stat-value" id="stat-mine">—</div>
+          <div class="stat-label">My Tasks</div>
+        </div>
+      </div>
+
+      <!-- Recent Tasks -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-header-title">📋 Recent Tasks</div>
+          <a href="tasks.html" class="btn btn-secondary btn-sm">View All →</a>
+        </div>
+        <div id="recent-tasks-body">
+          <div class="loading-spinner"><div class="spinner"></div> Loading tasks…</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Load order matters: shell → api → toast → utils → notifications → page logic -->
+<script src="js/shell.js"></script>
+<script src="js/api.js"></script>
+<script src="js/toast.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/notifications.js"></script>
+<script>
+  if (!initPage('dashboard', 'Dashboard')) { throw new Error('Not authenticated'); }
+
+  async function loadDashboard() {
+    // Load tasks first (always available).
+    // getDashboardStats may return null (403 if endpoint doesn't exist / role restricted) — that's fine.
+    var tasksData  = await Api.getRecentTasks();
+    var statsData  = await Api.getDashboardStats().catch(function(){ return null; });
+
+    var tasks = tasksData
+      ? (tasksData.content || (Array.isArray(tasksData) ? tasksData : []))
+      : [];
+
+    // Prefer dedicated stats endpoint; fall back to computing from task list
+    var user = Api.getUser();
+    document.getElementById('stat-total').textContent = statsData && statsData.total != null
+      ? statsData.total
+      : tasks.length;
+    document.getElementById('stat-done').textContent = statsData && (statsData.completed != null || statsData.done != null)
+      ? (statsData.completed != null ? statsData.completed : statsData.done)
+      : tasks.filter(function(t){ return t.status === 'DONE'; }).length;
+    document.getElementById('stat-pending').textContent = statsData && statsData.pending != null
+      ? statsData.pending
+      : tasks.filter(function(t){ return t.status !== 'DONE'; }).length;
+    document.getElementById('stat-mine').textContent = statsData && (statsData.myTasks != null || statsData.assignedToMe != null)
+      ? (statsData.myTasks != null ? statsData.myTasks : statsData.assignedToMe)
+      : (user ? tasks.filter(function(t){
+          return (t.assignedUser && String(t.assignedUser.id) === String(user.id)) ||
+                 (t.assignedTo   && String(t.assignedTo.id)   === String(user.id));
+        }).length : '—');
+
+    // Table
+    var tbody = document.getElementById('recent-tasks-body');
+    if (!tasks.length) {
+      tbody.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><h6>No tasks yet</h6><p>Create your first task to get started.</p></div>';
+      return;
+    }
+
+    var rows = tasks.map(function(t) {
+      var overdue = isOverdue(t.dueDate);
+      return '<tr>' +
+        '<td><a href="task-detail.html?id='+t.id+'" style="color:var(--text-primary);text-decoration:none;font-weight:500;display:block;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_esc(t.title)+'</a></td>' +
+        '<td>'+statusBadge(t.status)+'</td>' +
+        '<td>'+priorityBadge(t.priority)+'</td>' +
+        '<td style="color:var(--text-secondary);font-size:13px">'+_esc((t.assignedUser&&t.assignedUser.name)||(t.assignedTo&&t.assignedTo.name)||'—')+'</td>' +
+        '<td><span style="font-size:12px;'+(overdue?'color:var(--accent-red);font-weight:600':'color:var(--text-muted)')+'">'+
+          (overdue?'⚠️ ':'')+formatDate(t.dueDate)+'</span></td>' +
+        '<td><a href="task-detail.html?id='+t.id+'" class="btn btn-secondary btn-sm">View</a></td>' +
+        '</tr>';
+    }).join('');
+
+    tbody.innerHTML = '<div class="table-wrapper"><table>'+
+      '<thead><tr><th>Title</th><th>Status</th><th>Priority</th><th>Assigned To</th><th>Due Date</th><th>Actions</th></tr></thead>'+
+      '<tbody>'+rows+'</tbody></table></div>';
+  }
+
+  loadDashboard();
+</script>
+</body>
+</html>
