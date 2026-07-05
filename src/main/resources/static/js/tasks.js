@@ -1,18 +1,21 @@
 // ============================================================
 // tasks.js — Task list page logic with filters + pagination
 // ============================================================
-
+var allTasks = [];
 const TasksPage = {
+  
   page: 0,
   size: 10,
   totalPages: 0,
   totalElements: 0,
   filters: { title: '', status: '', priority: '', assignedUserId: '' },
   users: [],
+  projects: [],
   currentEditId: null,
 
   async init() {
     await this.loadUsers();
+    await this.loadProjects();
     await this.loadTasks();
     this.bindEvents();
   },
@@ -43,11 +46,12 @@ const TasksPage = {
     });
 
     // Create task form submit
-    const createForm = document.getElementById('task-form');
-    if (createForm) {
-      document.getElementById('save-task-btn')?.addEventListener('click', () => this.saveTask());
-    }
-
+   // Save Task Button
+document.getElementById('save-task-btn')
+  ?.addEventListener('click', () => this.saveTask());
+    document.getElementById('new-task-btn')?.addEventListener('click', () => {
+  this.openCreateModal();
+});
     // Modal reset on open
     const modal = document.getElementById('task-modal');
     if (modal) {
@@ -64,10 +68,24 @@ const TasksPage = {
     if (sel) sel.innerHTML = `<option value="">All Users</option>${opts}`;
     if (formSel) formSel.innerHTML = `<option value="">Unassigned</option>${opts}`;
   },
+    async loadProjects() {
+  const data = await Api.getProjects();
 
+  this.projects = data?.content || data || [];
+
+  const sel = document.getElementById('form-project');
+
+  if (sel) {
+    sel.innerHTML =
+      `<option value="">Select Project</option>` +
+      this.projects.map(p =>
+        `<option value="${p.id}">${escHtml(p.name)}</option>`
+      ).join('');
+  }
+},
   buildQueryParams() {
     const params = { page: this.page, size: this.size };
-    if (this.filters.title) params.title = this.filters.title;
+    if (this.filters.title) params.keyword = this.filters.title;
     if (this.filters.status) params.status = this.filters.status;
     if (this.filters.priority) params.priority = this.filters.priority;
     if (this.filters.assignedUserId) params.assignedUserId = this.filters.assignedUserId;
@@ -82,7 +100,7 @@ const TasksPage = {
       <div class="loading-spinner" style="justify-content:center"><div class="spinner"></div> Loading tasks...</div>
     </td></tr>`;
 
-    const data = await Api.getTasks(this.buildQueryParams());
+    const data = await Api.searchTasks(this.buildQueryParams());
     if (!data) {
       tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-state-icon">❌</div><h6>Failed to load</h6></div></td></tr>`;
       return;
@@ -90,6 +108,7 @@ const TasksPage = {
 
     // Handle both paginated and array responses
     const tasks = data.content || (Array.isArray(data) ? data : []);
+    allTasks = tasks;
     this.totalPages = data.totalPages || 1;
     this.totalElements = data.totalElements || tasks.length;
 
@@ -106,34 +125,62 @@ const TasksPage = {
     }
 
     this.renderPagination();
+    console.log("QUERY:", this.buildQueryParams());
+console.log("TOKEN:", Api.getToken());
   },
 
   renderRow(t) {
-    const overdue = isOverdue(t.dueDate);
-    return `
-      <tr>
-        <td>
-          <a href="task-detail.html?id=${t.id}" style="color:var(--text-primary);text-decoration:none;font-weight:500;display:block;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(t.title)}">
-            ${escHtml(t.title)}
-          </a>
-        </td>
-        <td>${statusBadge(t.status)}</td>
-        <td>${priorityBadge(t.priority)}</td>
-        <td style="color:var(--text-secondary);font-size:13px">${escHtml(t.assignedUser?.name || t.assignedTo?.name || '—')}</td>
-        <td>
-          <span style="font-size:12px;${overdue ? 'color:var(--accent-red);font-weight:600' : 'color:var(--text-muted)'}">
-            ${overdue ? '⚠️ ' : ''}${formatDate(t.dueDate)}
-          </span>
-        </td>
-        <td>
-          <div style="display:flex;gap:6px">
-            <a href="task-detail.html?id=${t.id}" class="btn btn-secondary btn-sm" title="View">👁</a>
-            <button class="btn btn-secondary btn-sm" onclick="TasksPage.openEditModal(${t.id})" title="Edit">✏️</button>
-            <button class="btn btn-danger btn-sm" onclick="TasksPage.deleteTask(${t.id})" title="Delete">🗑</button>
-          </div>
-        </td>
-      </tr>`;
-  },
+  const user = Api.getUser();
+  const isAdmin = user?.role === 'ADMIN'
+
+  const overdue = isOverdue(t.dueDate);
+
+  return `
+    <tr>
+      <td>
+        <a href="task-detail.html?id=${t.id}" 
+           style="color:var(--text-primary);text-decoration:none;font-weight:500;
+                  display:block;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+           title="${escHtml(t.title)}">
+          ${escHtml(t.title)}
+        </a>
+      </td>
+
+      <td>${statusBadge(t.status)}</td>
+      <td>${priorityBadge(t.priority)}</td>
+
+      <td style="color:var(--text-secondary);font-size:13px">
+        ${escHtml(t.assignedUser?.name || t.assignedTo?.name || '—')}
+      </td>
+
+      <td style="font-size:13px;color:var(--text-muted)">
+        ${escHtml(t.project?.name || '—')}
+      </td>
+
+      <td>
+        <span style="font-size:12px;${overdue ? 'color:var(--accent-red);font-weight:600' : 'color:var(--text-muted)'}">
+          ${overdue ? '⚠️ ' : ''}${formatDate(t.dueDate)}
+        </span>
+      </td>
+
+      <td>
+        <div style="display:flex;gap:6px">
+          <a href="task-detail.html?id=${t.id}" class="btn btn-secondary btn-sm" title="View">👁</a>
+
+          <button class="btn btn-secondary btn-sm"
+            onclick="TasksPage.openEditModal(${t.id})"
+            title="Edit">✏️</button>
+
+          ${isAdmin ? `
+            <button class="btn btn-danger btn-sm"
+              onclick="TasksPage.deleteTask(${t.id})"
+              title="Delete">🗑</button>
+          ` : ''}
+        </div>
+      </td>
+    </tr>
+  `;
+},
 
   renderPagination() {
     const wrap = document.getElementById('pagination-wrap');
@@ -173,7 +220,6 @@ const TasksPage = {
   openCreateModal() {
     this.currentEditId = null;
     document.getElementById('modal-title').textContent = '+ New Task';
-    document.getElementById('task-form').reset();
     document.getElementById('form-id').value = '';
     const modal = new bootstrap.Modal(document.getElementById('task-modal'));
     modal.show();
@@ -196,18 +242,29 @@ const TasksPage = {
     if (assignSel) assignSel.value = task.assignedUser?.id || task.assignedTo?.id || '';
 
     const modal = new bootstrap.Modal(document.getElementById('task-modal'));
+    const projSel = document.getElementById('form-project');
+if (projSel) {
+  projSel.value = task.project?.id || '';
+}
     modal.show();
   },
 
   async saveTask() {
+    
     const id = document.getElementById('form-id').value;
     const payload = {
       title: document.getElementById('form-title').value.trim(),
       description: document.getElementById('form-description').value.trim(),
       priority: document.getElementById('form-priority').value,
-      status: document.getElementById('form-status').value,
+      status: document.getElementById('form-status').value || 'BACKLOG',
       dueDate: document.getElementById('form-duedate').value || null,
-      assignedUserId: document.getElementById('form-assignee').value || null,
+assignedUserId: document.getElementById('form-assignee').value
+  ? Number(document.getElementById('form-assignee').value)
+  : null,
+
+projectId: document.getElementById('form-project').value
+  ? Number(document.getElementById('form-project').value)
+  : null,
     };
 
     if (!payload.title) {
@@ -231,7 +288,12 @@ const TasksPage = {
 
     if (result) {
       Toast.success(id ? 'Task updated!' : 'Task created!');
-      bootstrap.Modal.getInstance(document.getElementById('task-modal'))?.hide();
+      const modalEl = document.getElementById('task-modal');
+const modalInstance = bootstrap.Modal.getInstance(modalEl);
+if (modalInstance) {
+  modalInstance.hide();
+  document.activeElement?.blur();
+}
       this.loadTasks();
     }
   },
@@ -249,5 +311,60 @@ const TasksPage = {
 function escHtml(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
+function exportTasksCSV() {
 
+  if (!allTasks || !allTasks.length) {
+    Toast.warning('No tasks to export');
+    return;
+  }
+
+  var headers = [
+    'Title',
+    'Status',
+    'Priority',
+    'Assigned User',
+    'Project',
+    'Due Date'
+  ];
+
+  var rows = allTasks.map(function(t) {
+
+    return [
+      '"' + (t.title || '') + '"',
+      '"' + (t.status || '') + '"',
+      '"' + (t.priority || '') + '"',
+      '"' + (t.assignedUser?.name || '') + '"',
+      '"' + (t.project?.name || '') + '"',
+      '"' + (t.dueDate || '') + '"'
+    ].join(',');
+
+  });
+
+  var csv =
+    headers.join(',') + '\n' +
+    rows.join('\n');
+
+  var blob = new Blob([csv], {
+    type: 'text/csv;charset=utf-8;'
+  });
+
+  var url = URL.createObjectURL(blob);
+
+  var a = document.createElement('a');
+
+  a.href = url;
+
+  a.download = 'tasks.csv';
+
+  document.body.appendChild(a);
+
+  a.click();
+
+  document.body.removeChild(a);
+
+  URL.revokeObjectURL(url);
+
+  Toast.success('CSV exported successfully');
+}
+window.exportTasksCSV = exportTasksCSV;
 window.TasksPage = TasksPage;

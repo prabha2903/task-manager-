@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TaskFlow — Profile</title>
+</head>
+<body>
+
+<div class="app-layout">
+
+  <div id="sidebar-mount"></div>
+
+  <div class="main-content">
+
+    <div id="topbar-mount"></div>
+
+    <div class="page-content">
+
+      <div class="card" style="max-width:500px">
+
+        <div class="card-header">
+          <div class="card-header-title">👤 My Profile</div>
+        </div>
+
+        <div class="card-body">
+
+          <div class="mb-3">
+            <label>Name</label>
+            <input type="text" id="name" class="form-control" />
+          </div>
+
+          <div class="mb-3">
+            <label>Email</label>
+            <input type="email" id="email" class="form-control" disabled />
+          </div>
+
+          <button class="btn btn-primary" id="save-btn">
+            Save Changes
+          </button>
+          <hr style="margin:24px 0">
+
+<h5>🔒 Change Password</h5>
+
+<div class="mb-3">
+  <label>Current Password</label>
+  <input type="password"
+         id="current-password"
+         class="form-control" />
+</div>
+
+<div class="mb-3">
+  <label>New Password</label>
+  <input type="password"
+         id="new-password"
+         class="form-control" />
+</div>
+
+<button class="btn btn-danger"
+        id="password-btn">
+  Change Password
+</button>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<script src="js/shell.js"></script>
+<script src="js/api.js"></script>
+<script src="js/toast.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/notifications.js"></script>
+
+<script>
+  if (!initPage('profile', 'Profile')) {
+    window.location.href = 'index.html';
+  }
+
+var currentUser = Api.getUser();
+
+document.getElementById('name').value = currentUser.name || '';
+document.getElementById('email').value = currentUser.email || '';
+
+document.getElementById('save-btn')
+.addEventListener('click', async function() {
+
+  var updatedName =
+    document.getElementById('name').value.trim();
+
+  if (!updatedName) {
+    Toast.error('Name is required');
+    return;
+  }
+
+  var updatedUser = await Api.updateUser(
+    currentUser.id,
+    {
+      name: updatedName
+    }
+  );
+
+  if (!updatedUser) return;
+
+  Api.setUser(updatedUser);
+
+  Toast.success('Profile updated successfully');
+   
+});
+document.getElementById('password-btn')
+.addEventListener('click', async function() {
+
+  var currentPassword =
+    document.getElementById('current-password').value;
+
+  var newPassword =
+    document.getElementById('new-password').value;
+
+  if (!currentPassword || !newPassword) {
+    Toast.error('Please fill all password fields');
+    return;
+  }
+
+  var result = await Api.changePassword(
+    currentUser.id,
+    {
+      currentPassword: currentPassword,
+      newPassword: newPassword
+    }
+  );
+
+  if (!result) return;
+
+  Toast.success('Password changed successfully');
+
+  document.getElementById('current-password').value = '';
+  document.getElementById('new-password').value = '';
+});
+</script>
+
+</body>
+</html>

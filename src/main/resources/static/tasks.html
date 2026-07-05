@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaskFlow — Tasks</title>
+</head>
+<body>
+<div class="app-layout">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="topbar-mount"></div>
+    <div class="page-content">
+
+      <!-- Filter Bar -->
+      <div class="filter-bar">
+        <div class="search-input-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="filter-title" class="form-control" placeholder="Search tasks by title…" />
+        </div>
+       <select id="filter-status" class="form-select">
+  <option value="">All Status</option>
+  <option value="BACKLOG">Backlog</option>
+  <option value="IN_PROGRESS">In Progress</option>
+  <option value="REVIEW">Review</option>
+  <option value="QA">QA</option>
+  <option value="BLOCKED">Blocked</option>
+  <option value="DONE">Done</option>
+</select>
+        <select id="filter-priority" class="form-select" style="width:155px;flex:none">
+          <option value="">All Priority</option>
+          <option value="LOW">🟢 Low</option>
+          <option value="MEDIUM">🟠 Medium</option>
+          <option value="HIGH">🔴 High</option>
+        </select>
+        <select id="filter-user" class="form-select" style="width:155px;flex:none">
+          <option value="">All Users</option>
+        </select>
+        <button class="btn btn-primary" id="new-task-btn" style="flex:none;white-space:nowrap">+ New Task</button>
+      </div>
+
+      <!-- Table -->
+      <div class="card">
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Status</th>
+                <th>Priority</th>
+                <th>Assigned To</th>
+                 <th>Project</th> 
+                <th>Due Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tasks-tbody">
+              <tr><td colspan="7"><div class="loading-spinner" style="justify-content:center"><div class="spinner"></div> Loading…</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="pagination-wrap" class="pagination-wrap"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Task Modal -->
+<div class="modal fade" id="task-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modal-title">New Task</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="form-id" />
+
+        <div class="mb-3">
+          <label class="form-label">Title <span style="color:var(--accent-red)">*</span></label>
+          <input type="text" id="form-title" class="form-control" placeholder="Task title" />
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Description</label>
+          <textarea id="form-description" class="form-control" rows="3" placeholder="Describe the task…"></textarea>
+        </div>
+        <div class="mb-3" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label class="form-label">Priority</label>
+            <select id="form-priority" class="form-select">
+              <option value="LOW">🟢 Low</option>
+              <option value="MEDIUM" selected>🟠 Medium</option>
+              <option value="HIGH">🔴 High</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Status</label>
+            <select id="form-status" class="form-select">
+  <option value="BACKLOG">Backlog</option>
+  <option value="IN_PROGRESS">In Progress</option>
+  <option value="REVIEW">Review</option>
+  <option value="QA">QA</option>
+  <option value="BLOCKED">Blocked</option>
+  <option value="DONE">Done</option>
+</select>
+          </div>
+        </div>
+        <div class="mb-3" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label class="form-label">Due Date</label>
+            <input type="date" id="form-duedate" class="form-control" />
+          </div>
+          <div>
+            <label class="form-label">Assign To</label>
+            <select id="form-assignee" class="form-select">
+              <option value="">Unassigned</option>
+            </select>
+          </div>
+        </div>
+        <div class="mb-3">
+  <label class="form-label">Project</label>
+  <select id="form-project" class="form-select">
+    <option value="">Select Project</option>
+  </select>
+</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="save-task-btn">Save Task</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/shell.js"></script>
+<script src="js/api.js"></script>
+<script src="js/toast.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/notifications.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script src="js/tasks.js"></script>
+<!-- Bootstrap JS (needed for modal) -->
+
+<!-- ONLY CHANGED PARTS SHOWN CLEARLY -->
+
+<script>
+initPage(
+  'tasks',
+  'Tasks',
+  '<button class="btn btn-secondary" onclick="exportTasksCSV()">⬇ Export</button>'
+);  TasksPage.init();
+</script>
+
+</body>
+</html>

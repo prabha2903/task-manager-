@@ -20,7 +20,7 @@ public class ActivityLog {
     private Long id;
 
     private String action;
-
+    private String detail;
     private LocalDateTime timestamp;
 
     @ManyToOne

@@ -12,7 +12,8 @@ const Activity = {
         <div class="spinner"></div> Loading activity...
       </div>`;
 
-    const data = await Api.getActivityLog(taskId);
+    const res = await Api.getActivityLog(taskId);
+const data = Array.isArray(res) ? res : (res?.data || []);
 
     if (!data || !Array.isArray(data) || data.length === 0) {
       container.innerHTML = `
@@ -43,22 +44,24 @@ const Activity = {
   },
 
   _formatAction(log) {
-    const user = `<strong>${this._esc(log.performedBy || log.user || 'Unknown')}</strong>`;
-    const action = log.action || '';
-    const detail = log.detail || log.newValue || '';
+  const userName = log.user?.name || log.performedBy || 'Unknown';
+  const user = `<strong>${this._esc(userName)}</strong>`;
 
-    const templates = {
-      'TASK_CREATED': `${user} created this task`,
-      'STATUS_CHANGED': `${user} changed status to <span class="badge badge-${(detail || '').toLowerCase().replace(' ', '')}">${this._esc(detail)}</span>`,
-      'ASSIGNED': `${user} assigned the task to <strong>${this._esc(detail)}</strong>`,
-      'COMMENT_ADDED': `${user} added a comment`,
-      'PRIORITY_CHANGED': `${user} changed priority to <strong>${this._esc(detail)}</strong>`,
-      'TASK_UPDATED': `${user} updated the task`,
-      'DUE_DATE_CHANGED': `${user} changed due date to <strong>${this._esc(detail)}</strong>`,
-    };
+  const action = log.action || '';
+  const detail = log.detail || log.newValue || '';
 
-    return templates[action] || `${user} performed action: <em>${this._esc(action)}</em>${detail ? ` → ${this._esc(detail)}` : ''}`;
-  },
+  const templates = {
+    'TASK_CREATED': `${user} created this task`,
+    'STATUS_CHANGED': `${user} changed status to <span class="badge badge-${(detail || '').toLowerCase().replace(' ', '')}">${this._esc(detail)}</span>`,
+    'ASSIGNED': `${user} assigned the task to <strong>${this._esc(detail)}</strong>`,
+    'COMMENT_ADDED': `${user} added a comment`,
+    'PRIORITY_CHANGED': `${user} changed priority to <strong>${this._esc(detail)}</strong>`,
+    'TASK_UPDATED': `${user} updated the task`,
+    'DUE_DATE_CHANGED': `${user} changed due date to <strong>${this._esc(detail)}</strong>`,
+  };
+
+  return templates[action] || `${user} performed action: <em>${this._esc(action)}</em>${detail ? ` → ${this._esc(detail)}` : ''}`;
+},
 
   _getIcon(action) {
     const icons = {

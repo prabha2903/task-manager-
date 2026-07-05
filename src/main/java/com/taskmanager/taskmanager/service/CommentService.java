@@ -1,5 +1,4 @@
 package com.taskmanager.taskmanager.service;
-
 import com.taskmanager.taskmanager.dto.CommentRequest;
 import com.taskmanager.taskmanager.model.Comment;
 import com.taskmanager.taskmanager.model.Task;
@@ -55,7 +54,12 @@ public class CommentService {
         Comment savedComment = commentRepository.save(comment);
 
         // 🔥 ACTIVITY LOG (VERY IMPORTANT)
-        activityLogService.log(user, "Added comment", task);
+        activityLogService.log(
+                user,
+                "COMMENT_ADDED",
+                request.getContent(),
+                task
+        );
 
         return savedComment;
     }
@@ -74,5 +78,47 @@ public class CommentService {
         }
 
         return commentRepository.findByTaskId(taskId);
+    }
+
+    public Comment updateComment(Long id, String content, String email) {
+
+        Comment c = commentRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Comment not found"
+                        ));
+
+        if (!c.getUser().getEmail().equals(email)) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Not your comment"
+            );
+        }
+
+        c.setContent(content);
+
+        return commentRepository.save(c);
+    }
+
+    public void deleteComment(Long id, String email) {
+
+        Comment c = commentRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Comment not found"
+                        ));
+
+        if (!c.getUser().getEmail().equals(email)) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Not your comment"
+            );
+        }
+
+        commentRepository.delete(c);
     }
 }

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaskFlow — Projects</title>
+</head>
+<body>
+<div class="app-layout">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="topbar-mount"></div>
+    <div class="page-content">
+
+      <!-- Filter Bar -->
+      <div class="filter-bar">
+        <div class="search-input-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="filter-name" class="form-control" placeholder="Search projects…" />
+        </div>
+
+        <button class="btn btn-primary" id="new-project-btn">
+          + New Project
+        </button>
+      </div>
+
+      <!-- Table -->
+      <div class="card">
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Created Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+
+            <tbody id="projects-tbody">
+              <tr>
+                <td colspan="4">
+                  <div class="loading-spinner" style="justify-content:center">
+                    <div class="spinner"></div> Loading projects...
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+
+          </table>
+        </div>
+      </div>
+    <div id="pagination-wrap" class="pagination-wrap"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL ================= -->
+
+<div class="modal fade" id="project-modal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title" id="modal-title">New Project</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <input type="hidden" id="form-id" />
+
+        <div class="mb-3">
+          <label class="form-label">Project Name *</label>
+          <input type="text" id="form-name" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Description</label>
+          <textarea id="form-description" class="form-control" rows="3"></textarea>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" id="save-project-btn">Save Project</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ================= SCRIPTS ================= -->
+
+<script src="js/shell.js"></script>
+<script src="js/api.js"></script>
+<script src="js/toast.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/notifications.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script src="js/projects.js"></script>
+
+<script>
+  if (!initPage('projects', 'Projects')) {
+    throw new Error('Not authenticated');
+  }
+
+  ProjectsPage.init();
+</script>
+
+</body>
+</html>

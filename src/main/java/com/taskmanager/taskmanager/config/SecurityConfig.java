@@ -38,12 +38,30 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
+
+                        .requestMatchers(
+                                "/",
+                                "/index.html",
+                                "/*.html",
+                                "/css/**",
+                                "/js/**",
+                                "/images/**",
+                                "/favicon.ico",
+                                "/api/auth/**",
+                                "/ws/**",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**"
+                        ).permitAll()
                         .requestMatchers("/ws/**").permitAll()
-                        .requestMatchers("/api/comments/**",
+
+                        .requestMatchers(
+                                "/api/reports/**",
+                                "/api/comments/**",
                                 "/api/tasks/**",
                                 "/api/dashboard/**",
-                                "/api/activity/**").authenticated()
+                                "/api/activity/**"
+                        ).authenticated()
+
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session ->

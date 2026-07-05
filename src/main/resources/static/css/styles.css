@@ -430,21 +430,24 @@ body {
 
 .notif-badge {
   position: absolute;
-  top: -5px; right: -5px;
+  top: -5px;
+  right: -5px;
   background: var(--accent-red);
   color: #fff;
   font-size: 9px;
   font-weight: 700;
-  width: 16px; height: 16px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  display: flex;
   align-items: center;
   justify-content: center;
   border: 2px solid var(--bg-secondary);
   display: none;
 }
 
-.notif-badge.show { display: flex; }
+.notif-badge.show {
+  display: flex;
+}
 
 .notif-dropdown {
   position: absolute;
@@ -645,7 +648,7 @@ tbody td {
   flex-shrink: 0;
 }
 
-.badge-todo { background: rgba(139,148,158,0.15); color: #8b949e; }
+.badge-backlog { background: rgba(139,148,158,0.15); color: #8b949e; }
 .badge-inprogress { background: rgba(56,139,253,0.15); color: var(--accent-blue); }
 .badge-done { background: rgba(63,185,80,0.15); color: var(--accent-green); }
 .badge-low { background: rgba(63,185,80,0.15); color: var(--accent-green); }
@@ -1090,4 +1093,73 @@ tbody td {
   .kanban-col { width: 100%; min-width: unset; }
   .filter-bar { flex-direction: column; }
   .filter-bar > * { width: 100%; }
+}
+
+body {
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.badge-backlog {
+  background: #8b949e;
+  color: white;
+}
+
+.badge-review {
+  background: #d29922;
+  color: white;
+}
+
+.badge-qa {
+  background: #bf8700;
+  color: white;
+}
+
+.badge-blocked {
+  background: #f85149;
+  color: white;
+}
+
+/* ===== LIGHT THEME ===== */
+[data-theme="light"] {
+  --bg-primary: #f6f8fa;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f0f2f5;
+  --bg-card: #ffffff;
+  --bg-hover: #eaeef2;
+
+  --border-color: #d0d7de;
+  --border-subtle: #e8ecf0;
+
+  --text-primary: #1f2328;
+  --text-secondary: #636c76;
+  --text-muted: #9198a1;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.12);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.16);
+}
+
+/* Smooth theme transitions */
+*, *::before, *::after {
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+[data-theme="light"] .modal-header .btn-close {
+  filter: none;
+}
+.shortcut-hint{
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  white-space: nowrap;
 }

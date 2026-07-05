@@ -26,13 +26,17 @@ function renderSidebar(activePage) {
   const user = Api.getUser();
   const name = (user && user.name) ? user.name : 'User';
   const initials = name.split(' ').map(function(w){ return w[0]; }).join('').toUpperCase().slice(0,2);
-  const role = (user && user.role) ? user.role.toLowerCase() : 'user';
+  const role = (user.role?.name || user.role || 'developer')
+  .toString()
+  .toLowerCase();
 
   var navItems = [
     { page: 'dashboard', icon: '🏠', label: 'Dashboard', href: 'dashboard.html' },
     { page: 'tasks',     icon: '✅', label: 'Tasks',     href: 'tasks.html' },
     { page: 'kanban',    icon: '📋', label: 'Kanban',    href: 'kanban.html' },
     { page: 'users',     icon: '👥', label: 'Team',      href: 'users.html' },
+    { page: 'projects',  icon: '📁', label: 'Projects',  href: 'projects.html' },
+    { page: 'reports', icon: '📈', label: 'Reports', href: 'reports.html' }
   ];
 
   var navHTML = navItems.map(function(item) {
@@ -76,8 +80,10 @@ function renderTopbar(title, actions) {
     '  <button class="btn btn-secondary btn-icon sidebar-toggle-btn" id="sidebar-toggle" style="display:none">☰</button>',
     '  <h1 class="topbar-title">' + title + '</h1>',
     '  <div class="topbar-actions">',
-         actions,
-    '    <div style="position:relative">',
+     actions,
+'    <button id="theme-toggle" class="btn btn-secondary btn-icon" title="Toggle Theme">🌙</button>',
+     '<div class="shortcut-hint">⌨ N • K • / • ESC</div>',
+'    <div style="position:relative">',
     '      <button class="notif-btn" id="notif-btn" title="Notifications">',
     '        🔔',
     '        <span class="notif-badge" id="notif-badge">0</span>',
@@ -141,7 +147,23 @@ function initPage(activePage, title, topbarActions) {
 
   // Init notifications WebSocket
   Notifications.init();
+   // ── Theme: retry until theme.js finishes async loading ──────────
+  (function tryTheme(n) {
+    if (window.Theme && typeof window.Theme.init === 'function') {
 
+      if (!window.Theme.__pageInit) {
+        window.Theme.__pageInit = true;
+        window.Theme.init();
+      }
+
+    } else if (n > 0) {
+
+      setTimeout(function () {
+        tryTheme(n - 1);
+      }, 50);
+
+    }
+  })(40);
   return true;
 }
 
@@ -158,11 +180,16 @@ function handleLogout() {
 // -----------------------------------------------------------
 function statusBadge(status) {
   var map = {
-    'TODO':        '<span class="badge badge-todo">Todo</span>',
+    'BACKLOG':     '<span class="badge badge-backlog">Backlog</span>',
     'IN_PROGRESS': '<span class="badge badge-inprogress">In Progress</span>',
+    'REVIEW':      '<span class="badge badge-review">Review</span>',
+    'QA':          '<span class="badge badge-qa">QA</span>',
+    'BLOCKED':     '<span class="badge badge-blocked">Blocked</span>',
     'DONE':        '<span class="badge badge-done">Done</span>',
   };
-  return map[status] || '<span class="badge badge-todo">' + _esc(status) + '</span>';
+
+  return map[status] ||
+    '<span class="badge badge-todo">' + _esc(status) + '</span>';
 }
 
 function priorityBadge(priority) {
@@ -233,7 +260,108 @@ function debounce(fn, delay) {
 function getInitials(name) {
   return String(name || 'U').split(' ').map(function(w){ return w[0]; }).join('').toUpperCase().slice(0,2);
 }
+ 
+// ======================================================
+// Keyboard Shortcuts
+// N = New Task
+// K = Kanban
+// / = Focus Search
+// ESC = Close Modal
+// ======================================================
 
+// ======================================================
+// Keyboard Shortcuts
+// N = New Task
+// K = Kanban
+// / = Focus Search
+// ESC = Close Modal
+// ======================================================
+
+document.addEventListener('keydown', function(e) {
+
+  // Don't trigger while typing
+  const tag = document.activeElement.tagName;
+
+  if (
+    tag === 'INPUT' ||
+    tag === 'TEXTAREA' ||
+    document.activeElement.isContentEditable
+  ) {
+    // Allow ESC even inside input
+    if (e.key !== 'Escape') {
+      return;
+    }
+  }
+
+  // ====================================================
+  // N → Open New Task Modal
+  // ====================================================
+
+  if (e.key === 'n' || e.key === 'N') {
+
+    e.preventDefault();
+
+    // tasks page la modal open
+    if (
+      window.TasksPage &&
+      typeof TasksPage.openCreateModal === 'function'
+    ) {
+      TasksPage.openCreateModal();
+      return;
+    }
+
+   // fallback
+window.location.href = 'tasks.html?new=true';
+  }
+
+  // ====================================================
+  // K → Open Kanban
+  // ====================================================
+
+  if (e.key === 'k' || e.key === 'K') {
+
+    e.preventDefault();
+
+    window.location.href = 'kanban.html';
+  }
+
+  // ====================================================
+  // / → Focus Search
+  // ====================================================
+
+  if (e.key === '/') {
+
+    e.preventDefault();
+
+    const searchInput =
+      document.getElementById('filter-search');
+
+    if (searchInput) {
+      searchInput.focus();
+    }
+  }
+
+  // ====================================================
+  // ESC → Close Modal
+  // ====================================================
+
+  if (e.key === 'Escape') {
+
+    const modal =
+      document.querySelector('.modal.show');
+
+    if (modal && window.bootstrap) {
+
+      const bsModal =
+        bootstrap.Modal.getInstance(modal);
+
+      if (bsModal) {
+        bsModal.hide();
+      }
+    }
+  }
+
+});
 // Expose everything globally
 window.requireAuth    = requireAuth;
 window.redirectIfAuth = redirectIfAuth;

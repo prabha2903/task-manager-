@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Project Detail</title>
+</head>
+<body>
+
+<div class="app-layout">
+
+  <div id="sidebar-mount"></div>
+
+  <div class="main-content">
+
+    <div id="topbar-mount"></div>
+
+    <div class="page-content">
+
+      <!-- PROJECT HEADER -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-body">
+
+          <h2 id="project-name">Loading...</h2>
+
+          <p id="project-description"
+             style="color:var(--text-secondary)">
+          </p>
+
+        </div>
+      </div>
+
+      <!-- STATS -->
+      <div style="
+        display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+        gap:16px;
+        margin-bottom:20px">
+
+        <div class="stat-card blue">
+          <div class="stat-value" id="total-tasks">0</div>
+          <div class="stat-label">Total Tasks</div>
+        </div>
+
+        <div class="stat-card green">
+          <div class="stat-value" id="completed-tasks">0</div>
+          <div class="stat-label">Completed</div>
+        </div>
+
+        <div class="stat-card purple">
+          <div class="stat-value" id="completion-percent">0%</div>
+          <div class="stat-label">Completion</div>
+        </div>
+
+      </div>
+
+      <!-- COMPLETION RING -->
+      <div class="card" style="margin-bottom:20px">
+
+        <div class="card-header">
+          <div class="card-header-title">
+            📈 Progress
+          </div>
+        </div>
+
+        <div class="card-body"
+             style="display:flex;justify-content:center">
+
+          <div style="
+            width:180px;
+            height:180px;
+            border-radius:50%;
+            background:conic-gradient(
+              #22c55e var(--progress),
+              #2a2f3a 0
+            );
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            position:relative"
+            id="progress-ring">
+
+            <div style="
+              width:130px;
+              height:130px;
+              border-radius:50%;
+              background:#111827;
+              display:flex;
+              align-items:center;
+              justify-content:center;
+              font-size:28px;
+              font-weight:700"
+              id="progress-text">
+
+              0%
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- TASKS -->
+      <div class="card">
+
+        <div class="card-header">
+          <div class="card-header-title">
+            📋 Project Tasks
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+
+          <table>
+
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Status</th>
+                <th>Priority</th>
+                <th>Assigned User</th>
+              </tr>
+            </thead>
+
+            <tbody id="tasks-body">
+
+              <tr>
+                <td colspan="4">Loading...</td>
+              </tr>
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<script src="js/shell.js"></script>
+<script src="js/api.js"></script>
+<script src="js/toast.js"></script>
+<script src="js/utils.js"></script>
+
+<script>
+
+if (!initPage('projects', 'Project Detail')) {
+  throw new Error('Not authenticated');
+}
+
+const params = new URLSearchParams(window.location.search);
+
+const projectId = params.get('id');
+
+async function loadProject() {
+
+  const data = await Api.getProject(projectId);
+
+  if (!data) {
+    Toast.error('Failed to load project');
+    return;
+  }
+
+  const project = data.project;
+  const tasks = data.tasks || [];
+
+  // PROJECT INFO
+  document.getElementById('project-name').textContent =
+    project.name;
+
+  document.getElementById('project-description').textContent =
+    project.description || 'No description';
+
+  // STATS
+  document.getElementById('total-tasks').textContent =
+    data.totalTasks || 0;
+
+  document.getElementById('completed-tasks').textContent =
+    data.completedTasks || 0;
+
+  const percent =
+    Math.round(data.completionPercentage || 0);
+
+  document.getElementById('completion-percent').textContent =
+    percent + '%';
+
+  // RING
+  document.getElementById('progress-ring')
+    .style.setProperty('--progress', percent + '%');
+
+  document.getElementById('progress-text')
+    .textContent = percent + '%';
+
+  // TASK TABLE
+  const tbody =
+    document.getElementById('tasks-body');
+
+  if (!tasks.length) {
+
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="4"
+            style="text-align:center;padding:30px">
+          📭 No tasks found
+        </td>
+      </tr>
+    `;
+
+    return;
+  }
+
+  tbody.innerHTML = tasks.map(t => `
+    <tr>
+      <td>${_esc(t.title)}</td>
+      <td>${statusBadge(t.status)}</td>
+      <td>${priorityBadge(t.priority)}</td>
+      <td>${_esc(t.assignedUser?.name || '—')}</td>
+    </tr>
+  `).join('');
+
+}
+
+loadProject();
+
+</script>
+
+</body>
+</html>

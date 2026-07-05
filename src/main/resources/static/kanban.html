@@ -11,6 +11,39 @@
   <div class="main-content">
     <div id="topbar-mount"></div>
     <div class="page-content">
+      <!-- FILTER BAR -->
+<div class="filter-bar">
+
+  <!-- Search -->
+  <div class="search-input-wrap">
+    <span class="search-icon">🔍</span>
+    <input
+      type="text"
+      id="filter-search"
+      class="form-control"
+      placeholder="Search tasks..."
+    />
+  </div>
+
+  <!-- User Filter -->
+  <select id="filter-user" class="form-select" style="width:180px">
+    <option value="">All Users</option>
+  </select>
+
+  <!-- Priority Filter -->
+  <select id="filter-priority" class="form-select" style="width:160px">
+    <option value="">All Priorities</option>
+    <option value="LOW">Low</option>
+    <option value="MEDIUM">Medium</option>
+    <option value="HIGH">High</option>
+  </select>
+
+  <!-- Project Filter -->
+  <select id="filter-project" class="form-select" style="width:180px">
+    <option value="">All Projects</option>
+  </select>
+
+</div>
       <div id="kanban-board" class="kanban-board">
         <div class="loading-spinner" style="padding:60px"><div class="spinner"></div> Loading board…</div>
       </div>
@@ -46,18 +79,94 @@
   if (!initPage('kanban', 'Kanban Board')) { throw new Error('Not authenticated'); }
 
   var COLS = [
-    { id: 'TODO',        label: '⬜ Todo',        color: '#8b949e' },
-    { id: 'IN_PROGRESS', label: '🔵 In Progress',  color: '#388bfd' },
-    { id: 'DONE',        label: '✅ Done',          color: '#3fb950' },
-  ];
+  { id: 'BACKLOG',     label: '📥 Backlog',     color: '#8b949e' },
+  { id: 'IN_PROGRESS', label: '🔵 In Progress', color: '#388bfd' },
+  { id: 'REVIEW',      label: '🧐 Review',      color: '#d29922' },
+  { id: 'QA',          label: '🧪 QA',          color: '#bf8700' },
+  { id: 'BLOCKED',     label: '⛔ Blocked',     color: '#f85149' },
+  { id: 'DONE',        label: '✅ Done',        color: '#3fb950' }
+];
 
   var allTasks = [];
-
+ var filters = {
+  search: '',
+  user: '',
+  priority: '',
+  project: ''
+};
   async function loadKanban() {
     var data = await Api.getTasks({ size: 200 });
-    allTasks = data ? (data.content || (Array.isArray(data) ? data : [])) : [];
-    renderBoard();
+   allTasks = data ? (data.content || (Array.isArray(data) ? data : [])) : [];
+
+populateFilters();
+
+renderBoard();
   }
+  function populateFilters() {
+
+  // USER FILTER
+  var userSelect =
+    document.getElementById('filter-user');
+
+  var users = [];
+
+  allTasks.forEach(function(task) {
+
+    var user =
+      task.assignedUser;
+
+    if (
+      user &&
+      user.name &&
+      !users.includes(user.name)
+    ) {
+      users.push(user.name);
+    }
+
+  });
+
+  users.sort();
+
+  userSelect.innerHTML =
+    '<option value="">All Users</option>' +
+    users.map(function(name) {
+      return '<option value="'+name+'">'+
+        _esc(name)+
+      '</option>';
+    }).join('');
+
+  // PROJECT FILTER
+
+  var projectSelect =
+    document.getElementById('filter-project');
+
+  var projects = [];
+
+  allTasks.forEach(function(task) {
+
+    var project =
+      task.project;
+
+    if (
+      project &&
+      project.name &&
+      !projects.includes(project.name)
+    ) {
+      projects.push(project.name);
+    }
+
+  });
+
+  projects.sort();
+
+  projectSelect.innerHTML =
+    '<option value="">All Projects</option>' +
+    projects.map(function(name) {
+      return '<option value="'+name+'">'+
+        _esc(name)+
+      '</option>';
+    }).join('');
+}
 
   function renderBoard() {
     var board = document.getElementById('kanban-board');
@@ -130,7 +239,55 @@
   }
 
   function openCard(id) {
-    var task = allTasks.find(function(t){ return t.id === id; });
+   var tasks = allTasks.filter(function(t){
+
+  // STATUS
+  if (t.status !== col.id) {
+    return false;
+  }
+
+  // SEARCH
+  if (
+    filters.search &&
+    !t.title.toLowerCase().includes(
+      filters.search.toLowerCase()
+    )
+  ) {
+    return false;
+  }
+
+  // USER
+  if (
+    filters.user &&
+    (
+      !t.assignedUser ||
+      t.assignedUser.name !== filters.user
+    )
+  ) {
+    return false;
+  }
+
+  // PRIORITY
+  if (
+    filters.priority &&
+    t.priority !== filters.priority
+  ) {
+    return false;
+  }
+
+  // PROJECT
+  if (
+    filters.project &&
+    (
+      !t.project ||
+      t.project.name !== filters.project
+    )
+  ) {
+    return false;
+  }
+
+  return true;
+});
     if (!task) return;
     document.getElementById('modal-title').textContent = task.title;
     document.getElementById('modal-link').href = 'task-detail.html?id='+id;
@@ -147,7 +304,45 @@
   }
 
   window.openCard = openCard;
+// ============================================
+// FILTER EVENTS
+// ============================================
 
+document
+  .getElementById('filter-search')
+  .addEventListener('input', function(e){
+
+    filters.search = e.target.value;
+
+    renderBoard();
+  });
+
+document
+  .getElementById('filter-user')
+  .addEventListener('change', function(e){
+
+    filters.user = e.target.value;
+
+    renderBoard();
+  });
+
+document
+  .getElementById('filter-priority')
+  .addEventListener('change', function(e){
+
+    filters.priority = e.target.value;
+
+    renderBoard();
+  });
+
+document
+  .getElementById('filter-project')
+  .addEventListener('change', function(e){
+
+    filters.project = e.target.value;
+
+    renderBoard();
+  });
   loadKanban();
 </script>
 </body>

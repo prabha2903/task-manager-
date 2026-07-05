@@ -19,10 +19,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
         // ✅ prefix for server -> client messages (e.g., /topic/tasks)
-        registry.enableSimpleBroker("/topic");
+        registry.enableSimpleBroker("/topic", "/queue");
 
         // ✅ prefix for client -> server messages (e.g., /app/updateTask)
         registry.setApplicationDestinationPrefixes("/app");
+        registry.setUserDestinationPrefix("/user");
     }
 
     // Note: Since you are using JWT, you may eventually need to add

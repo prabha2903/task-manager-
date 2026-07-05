@@ -17,7 +17,7 @@ public class ActivityLogService {
     private final ActivityLogRepository activityLogRepository;
 
     // 🔥 Save activity log
-    public void log(User user, String action, Task task) {
+    public void log(User user, String action, String detail, Task task) {
 
         if (user == null || task == null) {
             throw new RuntimeException("User or Task cannot be null");
@@ -26,6 +26,7 @@ public class ActivityLogService {
         ActivityLog log = ActivityLog.builder()
                 .user(user)
                 .action(action)
+                .detail(detail)
                 .task(task)
                 .timestamp(LocalDateTime.now())
                 .build();

@@ -59,7 +59,14 @@
       <label class="form-label" for="password">Password</label>
       <input type="password" id="password" class="form-control" placeholder="At least 6 characters" autocomplete="new-password" />
     </div>
-
+     <div class="mb-4">
+  <label class="form-label" for="role">Role</label>
+  <select id="role" class="form-control">
+    <option value="DEVELOPER">Developer</option>
+    <option value="MANAGER">Manager</option>
+    <option value="ADMIN">Admin</option>
+  </select>
+</div>
     <button class="btn btn-primary btn-lg w-100" id="register-btn">Create Account</button>
 
     <div style="margin-top:20px;text-align:center;font-size:13px;color:var(--text-muted)">
@@ -74,12 +81,12 @@ var API_BASE = 'http://localhost:8080/api';
 var Api = {
   getToken: function(){ return localStorage.getItem('jwt_token'); },
   isAuthenticated: function(){ return !!this.getToken(); },
-  register: async function(name, email, password) {
+  register: async function(name, email, password, role) {
     try {
       var res = await fetch(API_BASE+'/auth/register', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({name:name, email:email, password:password})
+        body: JSON.stringify({name:name, email:email, password:password, role: role })
       });
       var data = await res.json().catch(function(){ return {}; });
       if (!res.ok) return {error: data.message || data.error || 'Registration failed'};
@@ -117,11 +124,12 @@ async function doRegister() {
   var name     = document.getElementById('name').value.trim();
   var email    = document.getElementById('email').value.trim();
   var password = document.getElementById('password').value;
+  var role = document.getElementById('role').value;
   if (!name || !email || !password) { showError('Please fill in all fields.'); return; }
   if (password.length < 6) { showError('Password must be at least 6 characters.'); return; }
 
   setLoading(true);
-  var data = await Api.register(name, email, password);
+  var data = await Api.register(name, email, password, role);
   setLoading(false);
 
   if (data && data.error) { showError(data.error); return; }

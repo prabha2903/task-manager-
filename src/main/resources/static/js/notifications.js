@@ -84,8 +84,15 @@ var Notifications = {
 
           self.stompClient.subscribe('/topic/notifications', function (msg) {
             var data;
-            try { data = JSON.parse(msg.body); }
-            catch (e) { data = { message: msg.body, type: 'info' }; }
+           if (msg.body.startsWith("{")) {
+  data = JSON.parse(msg.body);
+} else {
+  data = {
+    title: "Task Update",
+    message: msg.body,
+    type: "success"
+  };
+}
             self.onMessage(data);
           });
 

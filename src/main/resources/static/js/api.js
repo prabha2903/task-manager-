@@ -76,6 +76,9 @@ const Api = {
 
       if (res.status === 403) {
         console.warn("❌ 403 Forbidden → Access denied");
+        if (window.Toast) {
+    Toast.error("Access denied");
+  }
         return null;
       }
 
@@ -85,6 +88,9 @@ const Api = {
 
       if (!res.ok) {
         console.error("API ERROR:", data);
+        if (window.Toast) {
+    Toast.error(data.message || "Something went wrong");
+  }
         return null;
       }
 
@@ -92,6 +98,9 @@ const Api = {
 
     } catch (err) {
       console.error('[API Error]', err);
+       if (window.Toast) {
+    Toast.error("Server not reachable");
+  }
       return null;
     }
   },
@@ -149,29 +158,126 @@ const Api = {
   async getUsers() {
     return this.get('/users');
   },
+   async updateUser(id, data) {
+  return this.put(`/users/${id}`, data);
+},
+async changePassword(id, data) {
+  return this.put(`/users/${id}/password`, data);
+},
+async changeUserRole(id, role) {
+  return this.put(`/users/${id}/role`, {
+    role: role
+  });
+},
 
   // -----------------------------------------------------------
-  // Tasks
-  // -----------------------------------------------------------
-  async getTasks(params = {}) {
-    return this.get('/tasks/search', params); // pagination + filters
-  },
+// Projects
+// -----------------------------------------------------------
 
-  async getTask(id) {
-    return this.get(`/tasks/${id}`);
-  },
+async getProjects(params = {}) {
+  return this.get('/projects', params);
+},
 
-  async createTask(data) {
-    return this.post('/tasks', data);
-  },
+async getProject(id) {
+  return this.get(`/projects/${id}`);
+},
 
-  async updateTask(id, data) {
-    return this.put(`/tasks/${id}`, data);
-  },
+async createProject(data) {
+  return this.post('/projects', data);
+},
 
-  async deleteTask(id) {
-    return this.delete(`/tasks/${id}`);
-  }
+async updateProject(id, data) {
+  return this.put(`/projects/${id}`, data);
+},
+
+async deleteProject(id) {
+  return this.delete(`/projects/${id}`);
+},
+// -----------------------------------------------------------
+// Reports
+// -----------------------------------------------------------
+
+async getBurndownReport() {
+  return this.get('/reports/burndown');
+},
+
+async getTaskTrendReport() {
+  return this.get('/reports/task-trend');
+},
+
+async getUserVelocityReport() {
+  return this.get('/reports/user-velocity');
+},
+// -----------------------------------------------------------
+// Tasks
+// -----------------------------------------------------------
+
+// 🔥 SEARCH + PAGINATION (MAIN LIST)
+async searchTasks(params = {}) {
+  return this.get('/tasks/search', params);
+},
+
+// 🔥 KEEP (optional fallback)
+async getTasks(params = {}) {
+  return this.searchTasks(params);
+},
+
+// 🔥 GET SINGLE TASK
+async getTask(id) {
+  return this.get(`/tasks/${id}`);
+},
+
+// 🔥 CREATE
+async createTask(data) {
+  return this.post('/tasks', data);
+},
+
+// 🔥 FULL UPDATE (VERY IMPORTANT)
+async updateTask(id, data) {
+   console.log("✏️ Updating Task:", id, data);
+  return this.put(`/tasks/${id}`, data);
+},
+ // 🔥 UPDATE TASK STATUS
+async updateTaskStatus(id, status) {
+return this.put(`/tasks/${id}/status`, { status });
+},
+ // 🔥 COMMENTS
+// 🔥 COMMENTS (FIXED)
+async getComments(taskId) {
+  return this.get(`/comments/${taskId}`);
+},
+
+async addComment(taskId, content) {
+  return this.post(`/comments`, {
+    taskId: taskId,
+    content: content
+  });
+},
+// 🔥 DELETE
+async deleteTask(id) {
+  return this.delete(`/tasks/${id}`);
+},
+async updateComment(commentId, content) {
+
+    return this.put(
+        '/comments/' + commentId,
+        {
+            taskId: 0,
+            content: content
+        }
+    );
+},
+
+async deleteComment(commentId) {
+
+    return this.delete(
+        '/comments/' + commentId
+    );
+},
+async getActivityLog(taskId) {
+  return this.getComments(taskId); // safest fallback
+}
 };
+
 
 window.Api = Api;

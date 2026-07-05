@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaskFlow — Dashboard</title>
+</head>
+
+<body>
+<div class="app-layout">
+  <div id="sidebar-mount"></div>
+
+  <div class="main-content">
+    <div id="topbar-mount"></div>
+
+    <div class="page-content">
+
+      <!-- ================= STATS ================= -->
+      
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:24px">
+         <div class="stat-card red">
+  <div class="stat-icon red">⚠️</div>
+  <div class="stat-value" id="stat-overdue">—</div>
+  <div class="stat-label">Overdue</div>
+</div>
+        <div class="stat-card blue">
+          <div class="stat-icon blue">📊</div>
+          <div class="stat-value" id="stat-total">—</div>
+          <div class="stat-label">Total Tasks</div>
+        </div>
+
+        <div class="stat-card green">
+          <div class="stat-icon green">✅</div>
+          <div class="stat-value" id="stat-done">—</div>
+          <div class="stat-label">Completed</div>
+        </div>
+
+        <div class="stat-card orange">
+          <div class="stat-icon orange">⏳</div>
+          <div class="stat-value" id="stat-pending">—</div>
+          <div class="stat-label">Pending</div>
+        </div>
+
+        <div class="stat-card purple">
+          <div class="stat-icon purple">👤</div>
+          <div class="stat-value" id="stat-mine">—</div>
+          <div class="stat-label">My Tasks</div>
+        </div>
+      </div>
+
+      <!-- ================= CHARTS ================= -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px">
+        <div class="card">
+          <h5>Status Distribution</h5>
+          <canvas id="statusChart"></canvas>
+        </div>
+
+        <div class="card">
+          <h5>Priority Distribution</h5>
+          <canvas id="priorityChart"></canvas>
+        </div>
+      </div>
+        <div class="card">
+  <div class="card-header">
+    <div class="card-header-title">📅 Upcoming (Next 7 Days)</div>
+  </div>
+
+  <div id="upcoming-tasks-body">
+    <div class="loading-spinner">
+      <div class="spinner"></div> Loading upcoming tasks…
+    </div>
+  </div>
+</div>
+      <!-- ================= RECENT TASKS ================= -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-header-title">📋 Recent Tasks</div>
+          <a href="tasks.html" class="btn btn-secondary btn-sm">View All →</a>
+        </div>
+        <div id="recent-tasks-body">
+          <div class="loading-spinner">
+            <div class="spinner"></div> Loading tasks…
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ================= SCRIPTS ================= -->
+
+<script src="js/shell.js"></script>
+<script src="js/api.js"></script>
+<script src="js/toast.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/notifications.js"></script>
+
+<!-- ✅ Chart.js MUST be before usage -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+  if (!initPage('dashboard', 'Dashboard')) {
+    throw new Error('Not authenticated');
+  }
+  
+  let statusChartInstance = null;
+  let priorityChartInstance = null;
+
+  async function loadDashboard() {
+
+    var tasksData  = await Api.getRecentTasks();
+    var statsData  = await Api.getDashboardStats().catch(() => null);
+
+    var tasks = tasksData
+      ? (tasksData.content || (Array.isArray(tasksData) ? tasksData : []))
+      : [];
+    console.log("TASKS:", tasks);
+  console.log("STATS:", statsData);
+    var user = Api.getUser();
+
+    // ================= STATS =================
+    
+    document.getElementById('stat-total').textContent =
+      statsData?.totalTasks ?? tasks.length;
+
+    document.getElementById('stat-done').textContent =
+      statsData?.completedTasks ??
+      tasks.filter(t => t.status === 'DONE').length;
+
+    document.getElementById('stat-pending').textContent =
+      statsData?.pendingTasks ??
+      tasks.filter(t => t.status !== 'DONE').length;
+
+    document.getElementById('stat-mine').textContent =
+      statsData?.userTasks ??
+      (user
+        ? tasks.filter(t =>
+            (t.assignedUser && String(t.assignedUser.id) === String(user.id)) ||
+            (t.assignedTo && String(t.assignedTo.id) === String(user.id))
+          ).length
+        : '—');
+        document.getElementById('stat-overdue').textContent =
+  statsData?.overdueTasks ??
+  tasks.filter(t => isOverdue(t.dueDate) && t.status !== 'DONE').length;
+    // ================= CHART DATA =================
+    const statusCounts = {
+  BACKLOG: 0,
+  IN_PROGRESS: 0,
+  REVIEW: 0,
+  QA: 0,
+  BLOCKED: 0,
+  DONE: 0
+};
+    const priorityCounts = {
+  LOW: 0,
+  MEDIUM: 0,
+  HIGH: 0
+};
+
+    tasks.forEach(t => {
+      if (statusCounts[t.status] != null) statusCounts[t.status]++;
+      if (priorityCounts[t.priority] != null) priorityCounts[t.priority]++;
+    });
+
+    // ================= DESTROY OLD CHARTS =================
+    if (statusChartInstance) statusChartInstance.destroy();
+    if (priorityChartInstance) priorityChartInstance.destroy();
+
+    // ================= STATUS PIE =================
+    statusChartInstance = new Chart(document.getElementById('statusChart'), {
+      type: 'pie',
+      data: {
+        labels: Object.keys(statusCounts),
+        datasets: [{
+          label: 'Tasks by Status',
+          data: Object.values(statusCounts)
+        }]
+      },
+      options: {
+        responsive: true
+      }
+    });
+
+    // ================= PRIORITY BAR =================
+    priorityChartInstance = new Chart(document.getElementById('priorityChart'), {
+      type: 'bar',
+      data: {
+        labels: Object.keys(priorityCounts),
+        datasets: [{
+          label: 'Tasks by Priority',
+          data: Object.values(priorityCounts)
+        }]
+      },
+      options: {
+        responsive: true
+      }
+    });
+
+    // ================= TABLE =================
+    var tbody = document.getElementById('recent-tasks-body');
+
+    if (!tasks.length) {
+      tbody.innerHTML =
+        '<div class="empty-state"><div class="empty-state-icon">📭</div><h6>No tasks yet</h6></div>';
+      return;
+    }
+
+    var rows = tasks.map(function(t) {
+      var overdue = isOverdue(t.dueDate);
+
+      return '<tr>' +
+        '<td>' + _esc(t.title) + '</td>' +
+        '<td>' + statusBadge(t.status) + '</td>' +
+        '<td>' + priorityBadge(t.priority) + '</td>' +
+        '<td>' + _esc(t.assignedUser?.name || '—') + '</td>' +
+        '<td>' + formatDate(t.dueDate) + '</td>' +
+        '</tr>';
+    }).join('');
+
+    tbody.innerHTML =
+      '<div class="table-wrapper"><table>' +
+      '<thead><tr><th>Title</th><th>Status</th><th>Priority</th><th>User</th><th>Due</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody></table></div>';
+      
+
+  var upcomingDiv = document.getElementById('upcoming-tasks-body');
+
+var upcoming = statsData?.upcomingTasks || [];
+
+if (!upcoming.length) {
+  upcomingDiv.innerHTML =
+    '<div class="empty-state"><div class="empty-state-icon">📭</div><h6>No upcoming tasks</h6></div>';
+} else {
+  var upcomingRows = upcoming.map(function(t) {
+    return '<tr>' +
+      '<td>' + _esc(t.title) + '</td>' +
+      '<td>' + formatDate(t.dueDate) + '</td>' +
+      '<td>' + statusBadge(t.status) + '</td>' +
+      '<td>' + priorityBadge(t.priority) + '</td>' +
+      '</tr>';
+  }).join('');
+
+  upcomingDiv.innerHTML =
+    '<div class="table-wrapper"><table>' +
+    '<thead><tr><th>Title</th><th>Due</th><th>Status</th><th>Priority</th></tr></thead>' +
+    '<tbody>' + upcomingRows + '</tbody></table></div>';
+}
+  }
+  loadDashboard();
+</script>
+
+
+</body>
+</html>

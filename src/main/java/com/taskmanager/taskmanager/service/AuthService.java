@@ -33,13 +33,20 @@ public class AuthService {
             );
         }
 
+        RoleType roleType;
+
+        if (request.getRole() == null || request.getRole().isBlank()) {
+            roleType = RoleType.DEVELOPER; // ✅ default role
+        } else {
+            roleType = RoleType.valueOf(request.getRole().toUpperCase());
+        }
+
         Role role = roleRepository
-                .findByName(RoleType.valueOf(request.getRole()))
+                .findByName(roleType)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST,
                         "Invalid role"
                 ));
-
         User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
@@ -70,6 +77,14 @@ public class AuthService {
 
         String token = jwtUtil.generateToken(user.getEmail());
 
-        return new AuthResponse(token);
+        return new AuthResponse(
+                token,
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getRole() != null && user.getRole().getName() != null
+                        ? user.getRole().getName().name()
+                        : null
+        );
     }
 }

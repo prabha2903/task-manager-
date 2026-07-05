@@ -106,18 +106,131 @@
     Activity.load(taskId);
   }
 
-  function renderComments(list) {
-    if (!list || !list.length) return '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">💬 No comments yet. Be the first!</div>';
-    return list.map(function(c) {
-      var name = (c.author&&c.author.name)||(c.createdBy&&c.createdBy.name)||'User';
-      return '<div class="comment-item">'+
-        '<div class="comment-avatar">'+getInitials(name)+'</div>'+
-        '<div class="comment-body">'+
-          '<div class="comment-meta"><strong>'+_esc(name)+'</strong> · '+timeAgo(c.createdAt)+'</div>'+
-          '<div class="comment-text">'+_esc(c.content||c.text||'')+'</div>'+
-        '</div></div>';
-    }).join('');
+ function renderComments(list) {
+
+  const currentUser = Api.getUser();
+
+  if (!list || !list.length) {
+
+    return `
+      <div style="text-align:center;color:var(--text-muted)">
+        No comments yet
+      </div>
+    `;
   }
+
+  return list.map(c => {
+
+    const name = c.user?.name || 'User';
+
+    const isOwn =
+      currentUser &&
+      c.user &&
+      c.user.id === currentUser.id;
+
+    return `
+      <div class="comment-item">
+
+        <div class="comment-avatar">
+          ${getInitials(name)}
+        </div>
+
+        <div class="comment-body">
+
+          <div class="comment-meta">
+            <strong>${name}</strong>
+            ·
+            ${timeAgo(c.createdAt)}
+          </div>
+
+          <div class="comment-text"
+               id="ct-${c.id}">
+            ${c.content || ''}
+          </div>
+
+          ${isOwn ? `
+
+          <div style="margin-top:6px;display:flex;gap:8px">
+
+            <button class="btn btn-secondary btn-sm"
+                    onclick="editComment(${c.id})">
+
+              ✏️ Edit
+
+            </button>
+
+            <button class="btn btn-danger btn-sm"
+                    onclick="delComment(${c.id})">
+
+              🗑 Delete
+
+            </button>
+
+          </div>
+
+          ` : ''}
+
+        </div>
+
+      </div>
+    `;
+
+  }).join('');
+}
+async function editComment(id) {
+
+  const el =
+    document.getElementById('ct-' + id);
+
+  const newText =
+    prompt(
+      'Edit comment:',
+      el.textContent.trim()
+    );
+
+  if (!newText || !newText.trim()) return;
+
+  const r = await Api.updateComment(
+    id,
+    newText.trim()
+  );
+
+  if (r) {
+
+    Toast.success('Comment updated');
+
+    reloadComments();
+  }
+}
+
+async function delComment(id) {
+
+  if (!confirm('Delete this comment?')) {
+    return;
+  }
+
+  const r = await Api.deleteComment(id);
+
+  if (r !== false) {
+
+    Toast.success('Comment deleted');
+
+    reloadComments();
+  }
+}
+
+async function reloadComments() {
+
+  const comments =
+    await Api.getComments(taskId);
+
+  document.getElementById('comments-list')
+    .innerHTML =
+      renderComments(comments || []);
+}
+
+window.editComment = editComment;
+window.delComment = delComment;
 
   function highlightStatus(current) {
     ['TODO','IN_PROGRESS','DONE'].forEach(function(s) {

@@ -1,9 +1,10 @@
 package com.taskmanager.taskmanager.model.enums;
 
 public enum TaskStatus {
-
-    TODO,
+    BACKLOG,
     IN_PROGRESS,
+    REVIEW,
+    QA,
+    BLOCKED,
     DONE
-
 }
