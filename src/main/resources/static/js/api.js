@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:8080/api';
+const API_BASE = 'https://task-manager-pj2c.onrender.com/api';
 
 const Api = {
   // -----------------------------------------------------------

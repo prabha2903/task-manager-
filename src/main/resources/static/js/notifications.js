@@ -73,7 +73,7 @@ var Notifications = {
 
     var self = this;
     try {
-      var socket       = new SockJS('http://localhost:8080/ws');
+      var socket       = new SockJS('https://task-manager-pj2c.onrender.com/ws');
       this.stompClient = Stomp.over(socket);
       this.stompClient.debug = null;
 

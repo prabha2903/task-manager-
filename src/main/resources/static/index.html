@@ -107,7 +107,7 @@ var Toast = {
 };
 
 // ─── Minimal API (inline so no external file needed for login) ─
-var API_BASE = 'http://localhost:8080/api';
+var API_BASE = 'https://task-manager-pj2c.onrender.com/api';
 var Api = {
   getToken:   function(){ return localStorage.getItem('jwt_token'); },
   setToken:   function(t){ localStorage.setItem('jwt_token',t); },
