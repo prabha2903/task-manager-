@@ -70,8 +70,11 @@ loadScript(rootDir + 'js/theme.js', 'theme-script', function () {
   console.log('[shell.js] Theme loaded');
 
   // Safe init (no double init)
-  if (!window.Theme.__initialized && window.Theme && typeof window.Theme.init === 'function') {
-    window.Theme.__initialized = true;
+if (
+  window.Theme &&
+  !window.Theme.__initialized &&
+  typeof window.Theme.init === 'function'
+) {    window.Theme.__initialized = true;
     window.Theme.init();
   }
 });

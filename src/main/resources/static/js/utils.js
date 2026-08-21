@@ -146,7 +146,12 @@ function initPage(activePage, title, topbarActions) {
   });
 
   // Init notifications WebSocket
-  Notifications.init();
+  // Init notifications WebSocket
+  if (window.Notifications && typeof window.Notifications.init === 'function') {
+    window.Notifications.init();
+  } else {
+    console.warn('[utils.js] Notifications module is not loaded.');
+  }
    // ── Theme: retry until theme.js finishes async loading ──────────
   (function tryTheme(n) {
     if (window.Theme && typeof window.Theme.init === 'function') {
