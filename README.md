@@ -68,59 +68,6 @@ A full-stack task management application built with **Java Spring Boot, Spring S
 
 
 ---
-
-
-## Project Structure
-
-
-```text
-TaskManager/
-├── src/
-│   ├── main/
-│   │   ├── java/
-│   │   │   └── com/taskmanager/
-│   │   │       ├── config/
-│   │   │       ├── controller/
-│   │   │       ├── dto/
-│   │   │       ├── exception/
-│   │   │       ├── model/
-│   │   │       ├── repository/
-│   │   │       ├── security/
-│   │   │       └── service/
-│   │   │
-│   │   └── resources/
-│   │       ├── static/
-│   │       │   ├── css/
-│   │       │   ├── js/
-│   │       │   └── pages/
-│   │       └── application.properties
-│   │
-│   ├── test/
-│   │
-├── pom.xml
-├── Dockerfile
-├── .gitignore
-└── README.md
-API Overview
-Route	Purpose
-/api/auth	User registration and authentication
-/api/users	User management
-/api/tasks	Task management
-/api/projects	Project management
-/api/comments	Task comments
-/api/activity	Activity logs
-/api/dashboard	Dashboard statistics
-/api/reports	Reports
-Authentication Flow
-User Login
-    ↓
-Spring Security
-    ↓
-JWT Token
-    ↓
-JWT Authentication Filter
-    ↓
-Protected REST APIs
 Task Workflow
 TODO → IN_PROGRESS → DONE
 Future Improvements
@@ -273,7 +220,7 @@ JWT Authentication Filter
 Protected REST APIs
 Task Workflow
 TODO → IN_PROGRESS → DONE
-
+---
 Author
 
 Prabha
