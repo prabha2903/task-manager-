@@ -249,8 +249,10 @@ TaskManager/
 ├── Dockerfile
 ├── .gitignore
 └── README.md
+
+
 API Overview
-Route	Purpose
+Route Purpose
 /api/auth	User registration and authentication
 /api/users	User management
 /api/tasks	Task management
