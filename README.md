@@ -85,8 +85,8 @@ TaskManager/
 ├── .gitignore
 └── README.md
 
-**API Overview**
-Route	Purpose
+## **API Overview**
+Route Purpose
 /api/auth	User registration and authentication
 /api/users	User management
 /api/tasks	Task management
@@ -96,7 +96,7 @@ Route	Purpose
 /api/dashboard	Dashboard statistics
 /api/reports	Reports
 
-**Authentication Flow**
+## **Authentication Flow**
 User Login
     ↓
 Spring Security
@@ -106,7 +106,9 @@ JWT Token
 JWT Authentication Filter
     ↓
 Protected REST APIs
-Task Workflow
+
+## **Task Workflow**
+
 TODO → IN_PROGRESS → DONE
 Future Improvements
 React-based frontend
