@@ -1,14 +1,19 @@
 # Task Management System 📋
 
-A full-stack task management application built with Java Spring Boot, Spring Security, JWT authentication, MySQL, and a responsive HTML/CSS/JavaScript frontend.
+
+A full-stack task management application built with **Java Spring Boot, Spring Security, JWT authentication, MySQL**, and a responsive **HTML/CSS/JavaScript** frontend.
+
 
 **Live Demo:** https://task-manager-pj2c.onrender.com
 
+
 ---
+
 
 ## Features
 
-- 🔐 Secure user registration and login with JWT authentication 
+
+- 🔐 Secure user registration and login with JWT authentication
 - 👥 Role-based access control using Spring Security
 - 📋 Create, update, delete, assign, and track tasks
 - 📁 Create and manage projects
@@ -21,9 +26,12 @@ A full-stack task management application built with Java Spring Boot, Spring Sec
 - 📈 Task and project reports
 - 📱 Responsive user interface
 
+
 ---
 
+
 ## Tech Stack
+
 
 **Backend**
 - Java
@@ -35,14 +43,17 @@ A full-stack task management application built with Java Spring Boot, Spring Sec
 - WebSocket
 - Maven
 
+
 **Frontend**
 - HTML5
 - CSS3
 - JavaScript
 - Bootstrap
 
+
 **Database**
 - MySQL
+
 
 **Tools**
 - IntelliJ IDEA
@@ -51,12 +62,16 @@ A full-stack task management application built with Java Spring Boot, Spring Sec
 - Postman
 - Git & GitHub
 
+
 **Deployment**
 - Backend hosted on **Render**
 
+
 ---
 
+
 ## Project Structure
+
 
 ```text
 TaskManager/
@@ -80,29 +95,23 @@ TaskManager/
 │   │       │   └── pages/
 │   │       └── application.properties
 │   │
+│   ├── test/
+│   │
 ├── pom.xml
 ├── Dockerfile
 ├── .gitignore
 └── README.md
-
-## **API Overview**
-
-| Route | Purpose |
-|---|---|
-| `/api/auth` | User registration and authentication |
-| `/api/users` | User management |
-| `/api/tasks` | Task management |
-| `/api/projects` | Project management |
-| `/api/comments` | Task comments |
-| `/api/activity` | Activity logs |
-| `/api/dashboard` | Dashboard statistics |
-| `/api/reports` | Reports |
-
----
-
-## **Authentication Flow**
-
-```text
+API Overview
+Route	Purpose
+/api/auth	User registration and authentication
+/api/users	User management
+/api/tasks	Task management
+/api/projects	Project management
+/api/comments	Task comments
+/api/activity	Activity logs
+/api/dashboard	Dashboard statistics
+/api/reports	Reports
+Authentication Flow
 User Login
     ↓
 Spring Security
@@ -112,6 +121,156 @@ JWT Token
 JWT Authentication Filter
     ↓
 Protected REST APIs
+Task Workflow
+TODO → IN_PROGRESS → DONE
+Future Improvements
+React-based frontend
+Advanced real-time notifications
+Email notifications
+File attachments
+Advanced search and filtering
+Automated testing
+CI/CD pipeline
+Author
+
+Prabha
+
+B.E. Computer Science Engineering
+
+Java | Spring Boot | Backend Development | Full-Stack Development
+
+
+
+**Important:** உன் original README-ல `Project Structure` block-க்கு closing ` ``` ` missing இருந்தது. அதனால அதுக்குப் பிறகு வந்த எல்லாமே code block-க்குள்ள போயிடுச்சு. மேலே கொடுத்த version-ல அது correct-ah close பண்ணப்பட்டிருக்கு.
+same markdoen la ellame
+
+Yes 👍 full README-யும் ஒரே Markdown code block-ல கொடுக்கிறேன். இதை அப்படியே copy-paste பண்ணலாம்.
+
+# Task Management System 📋
+
+
+A full-stack task management application built with **Java Spring Boot, Spring Security, JWT authentication, MySQL**, and a responsive **HTML/CSS/JavaScript** frontend.
+
+
+**Live Demo:** https://task-manager-pj2c.onrender.com
+
+
+---
+
+
+## Features
+
+
+- 🔐 Secure user registration and login with JWT authentication
+- 👥 Role-based access control using Spring Security
+- 📋 Create, update, delete, assign, and track tasks
+- 📁 Create and manage projects
+- 📌 Kanban board for visual task management
+- 🔎 Search and filter tasks
+- 💬 Add and view comments on tasks
+- 📜 Track task activity through activity logs
+- 📊 Dashboard with task statistics and progress
+- 🔔 Real-time notification support using WebSocket
+- 📈 Task and project reports
+- 📱 Responsive user interface
+
+
+---
+
+
+## Tech Stack
+
+
+**Backend**
+- Java
+- Spring Boot
+- Spring Security
+- JWT Authentication
+- Spring Data JPA / Hibernate
+- REST APIs
+- WebSocket
+- Maven
+
+
+**Frontend**
+- HTML5
+- CSS3
+- JavaScript
+- Bootstrap
+
+
+**Database**
+- MySQL
+
+
+**Tools**
+- IntelliJ IDEA
+- Visual Studio Code
+- MySQL Workbench
+- Postman
+- Git & GitHub
+
+
+**Deployment**
+- Backend hosted on **Render**
+
+
+---
+
+
+## Project Structure
+
+
+```text
+TaskManager/
+├── src/
+│   ├── main/
+│   │   ├── java/
+│   │   │   └── com/taskmanager/
+│   │   │       ├── config/
+│   │   │       ├── controller/
+│   │   │       ├── dto/
+│   │   │       ├── exception/
+│   │   │       ├── model/
+│   │   │       ├── repository/
+│   │   │       ├── security/
+│   │   │       └── service/
+│   │   │
+│   │   └── resources/
+│   │       ├── static/
+│   │       │   ├── css/
+│   │       │   ├── js/
+│   │       │   └── pages/
+│   │       └── application.properties
+│   │
+│   ├── test/
+│   │
+├── pom.xml
+├── Dockerfile
+├── .gitignore
+└── README.md
+API Overview
+Route	Purpose
+/api/auth	User registration and authentication
+/api/users	User management
+/api/tasks	Task management
+/api/projects	Project management
+/api/comments	Task comments
+/api/activity	Activity logs
+/api/dashboard	Dashboard statistics
+/api/reports	Reports
+Authentication Flow
+User Login
+    ↓
+Spring Security
+    ↓
+JWT Token
+    ↓
+JWT Authentication Filter
+    ↓
+Protected REST APIs
+Task Workflow
+TODO → IN_PROGRESS → DONE
 
 Author
 
