@@ -8,7 +8,7 @@ A full-stack task management application built with Java Spring Boot, Spring Sec
 
 ## Features
 
-- 🔐 Secure user registration and login with JWT authentication
+- 🔐 Secure user registration and login with JWT authentication 
 - 👥 Role-based access control using Spring Security
 - 📋 Create, update, delete, assign, and track tasks
 - 📁 Create and manage projects
@@ -86,17 +86,23 @@ TaskManager/
 └── README.md
 
 ## **API Overview**
-Route Purpose
-/api/auth	User registration and authentication
-/api/users	User management
-/api/tasks	Task management
-/api/projects	Project management
-/api/comments	Task comments
-/api/activity	Activity logs
-/api/dashboard	Dashboard statistics
-/api/reports	Reports
+
+| Route | Purpose |
+|---|---|
+| `/api/auth` | User registration and authentication |
+| `/api/users` | User management |
+| `/api/tasks` | Task management |
+| `/api/projects` | Project management |
+| `/api/comments` | Task comments |
+| `/api/activity` | Activity logs |
+| `/api/dashboard` | Dashboard statistics |
+| `/api/reports` | Reports |
+
+---
 
 ## **Authentication Flow**
+
+```text
 User Login
     ↓
 Spring Security
@@ -107,19 +113,10 @@ JWT Authentication Filter
     ↓
 Protected REST APIs
 
-## **Task Workflow**
-
-TODO → IN_PROGRESS → DONE
-Future Improvements
-React-based frontend
-Advanced real-time notifications
-Email notifications
-File attachments
-Advanced search and filtering
-Automated testing
-CI/CD pipeline
-
 Author
+
 Prabha
+
 B.E. Computer Science Engineering
+
 Java | Spring Boot | Backend Development | Full-Stack Development
