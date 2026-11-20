@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaskFlow — Kanban</title>
+</head>
+<body>
+<div class="app-layout">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="topbar-mount"></div>
+    <div class="page-content">
+
+      <!-- FILTER BAR -->
+      <div class="filter-bar">
+        <div class="search-input-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="filter-search" class="form-control" placeholder="Search tasks..." />
+        </div>
+        <select id="filter-user" class="form-select" style="width:180px">
+          <option value="">All Users</option>
+        </select>
+        <select id="filter-priority" class="form-select" style="width:160px">
+          <option value="">All Priorities</option>
+          <option value="LOW">Low</option>
+          <option value="MEDIUM">Medium</option>
+          <option value="HIGH">High</option>
+        </select>
+        <select id="filter-project" class="form-select" style="width:180px">
+          <option value="">All Projects</option>
+        </select>
+        <button id="btn-clear-filters" class="btn btn-secondary btn-sm" style="white-space:nowrap">
+          ✕ Clear
+        </button>
+      </div>
+
+      <div id="kanban-board" class="kanban-board">
+        <div class="loading-spinner" style="padding:60px"><div class="spinner"></div> Loading board…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick-view modal -->
+<div class="modal fade" id="task-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modal-title">Task</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <a id="modal-link" href="#" class="btn btn-primary">View Full Task →</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/shell.js"></script>
+<script src="js/api.js"></script>
+<script src="js/toast.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/notifications.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+  if (!initPage('kanban', 'Kanban Board')) { throw new Error('Not authenticated'); }
+
+  // ─── Column definitions (status flow: BACKLOG→IN_PROGRESS→BLOCKED / DONE) ─
+  var COLS = [
+    { id: 'BACKLOG',     label: '📥 Backlog',     color: '#8b949e' },
+    { id: 'IN_PROGRESS', label: '🔵 In Progress', color: '#388bfd' },
+    { id: 'REVIEW',      label: '🧐 Review',      color: '#d29922' },
+    { id: 'QA',          label: '🧪 QA',          color: '#bf8700' },
+    { id: 'BLOCKED',     label: '⛔ Blocked',     color: '#f85149' },
+    { id: 'DONE',        label: '✅ Done',        color: '#3fb950' }
+  ];
+
+  // ─── State ───────────────────────────────────────────────────────────────
+  var allTasks = [];
+  var filters  = { search: '', user: '', priority: '', project: '' };
+
+  // ─── Load ─────────────────────────────────────────────────────────────────
+  async function loadKanban() {
+    var data = await Api.getTasks({ size: 200 });
+    allTasks = data ? (data.content || (Array.isArray(data) ? data : [])) : [];
+    populateFilters();
+    renderBoard();
+  }
+
+  // ─── Populate filter dropdowns from loaded tasks ──────────────────────────
+  function populateFilters() {
+    // Users
+    var userSel = document.getElementById('filter-user');
+    var users   = [];
+    allTasks.forEach(function(t) {
+      if (t.assignedUser && t.assignedUser.name && !users.includes(t.assignedUser.name))
+        users.push(t.assignedUser.name);
+    });
+    users.sort();
+    userSel.innerHTML = '<option value="">All Users</option>' +
+      users.map(function(n){ return '<option value="'+_esc(n)+'">'+_esc(n)+'</option>'; }).join('');
+
+    // Projects
+    var projSel  = document.getElementById('filter-project');
+    var projects = [];
+    allTasks.forEach(function(t) {
+      if (t.project && t.project.name && !projects.includes(t.project.name))
+        projects.push(t.project.name);
+    });
+    projects.sort();
+    projSel.innerHTML = '<option value="">All Projects</option>' +
+      projects.map(function(n){ return '<option value="'+_esc(n)+'">'+_esc(n)+'</option>'; }).join('');
+  }
+
+  // ─── Get visible tasks for a column (applies all active filters) ──────────
+  function getVisibleTasks(statusId) {
+    return allTasks.filter(function(t) {
+      if (t.status !== statusId) return false;
+      if (filters.search && !t.title.toLowerCase().includes(filters.search.toLowerCase())) return false;
+      if (filters.user   && (!t.assignedUser || t.assignedUser.name !== filters.user)) return false;
+      if (filters.priority && t.priority !== filters.priority) return false;
+      if (filters.project && (!t.project || t.project.name !== filters.project)) return false;
+      return true;
+    });
+  }
+
+  // ─── Render entire board ──────────────────────────────────────────────────
+  function renderBoard() {
+    var board = document.getElementById('kanban-board');
+    board.innerHTML = COLS.map(function(col) {
+      var tasks    = getVisibleTasks(col.id);
+      var cardsHtml = tasks.length
+        ? tasks.map(renderCard).join('')
+        : '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;border:1px dashed var(--border-color);border-radius:8px">Drop tasks here</div>';
+
+      return '<div class="kanban-col">' +
+        '<div class="kanban-col-header">' +
+          '<span><span class="col-indicator" style="background:'+col.color+'"></span>'+col.label+'</span>' +
+          '<span class="kanban-col-count" id="cnt-'+col.id+'">'+tasks.length+'</span>' +
+        '</div>' +
+        '<div class="kanban-cards" id="col-'+col.id+'" data-status="'+col.id+'">'+cardsHtml+'</div>' +
+      '</div>';
+    }).join('');
+
+    initDragAndDrop();
+  }
+
+  // ─── Render single card ───────────────────────────────────────────────────
+  function renderCard(task) {
+    return '<div class="kanban-card" data-id="'+task.id+'" onclick="openCard('+task.id+')">' +
+      '<div class="kanban-card-title">'+_esc(task.title)+'</div>' +
+      '<div class="kanban-card-meta">' +
+        priorityBadge(task.priority) +
+        (task.dueDate ? '<span style="font-size:11px;color:'+(isOverdue(task.dueDate)?'var(--accent-red)':'var(--text-muted)')+'">📅 '+formatDate(task.dueDate)+'</span>' : '') +
+        (task.assignedUser && task.assignedUser.name ? '<span style="font-size:11px;color:var(--text-muted)">👤 '+_esc(task.assignedUser.name)+'</span>' : '') +
+      '</div>' +
+    '</div>';
+  }
+
+  // ─── Drag-and-drop (SortableJS) ──────────────────────────────────────────
+  function initDragAndDrop() {
+    if (typeof Sortable === 'undefined') return;
+    COLS.forEach(function(col) {
+      var el = document.getElementById('col-' + col.id);
+      if (!el) return;
+      Sortable.create(el, {
+        group:     'kanban',
+        animation: 150,
+        draggable: '.kanban-card',
+        onEnd: async function(evt) {
+          var taskId    = evt.item.dataset.id;
+          var newStatus = evt.to.dataset.status;
+          var oldStatus = evt.from.dataset.status;
+          if (newStatus === oldStatus) return;
+
+          // Optimistic update
+          var t = allTasks.find(function(x){ return String(x.id) === String(taskId); });
+          if (t) t.status = newStatus;
+          refreshCounts(oldStatus);
+          refreshCounts(newStatus);
+
+          var result = await Api.updateTaskStatus(taskId, newStatus);
+          if (!result) {
+            // Roll back
+            if (t) t.status = oldStatus;
+            renderBoard();
+            Toast.error('Failed to update task status.');
+          } else {
+            Toast.success('Moved to ' + newStatus.replace(/_/g, ' '));
+          }
+        }
+      });
+    });
+  }
+
+  // ─── Update a single column's count badge ────────────────────────────────
+  function refreshCounts(statusId) {
+    var el  = document.getElementById('cnt-' + statusId);
+    var col = document.getElementById('col-' + statusId);
+    if (el && col) el.textContent = col.querySelectorAll('.kanban-card').length;
+  }
+
+  // ─── Open quick-view modal (FIXED — was using undefined `col` variable) ──
+  function openCard(id) {
+    var task = allTasks.find(function(t){ return String(t.id) === String(id); });
+    if (!task) return;
+
+    document.getElementById('modal-title').textContent = task.title;
+    document.getElementById('modal-link').href = 'task-detail.html?id=' + id;
+    document.getElementById('modal-body').innerHTML =
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">' +
+        statusBadge(task.status) + priorityBadge(task.priority) +
+        (task.dueDate ? '<span class="task-meta-item">📅 '+formatDate(task.dueDate)+'</span>' : '') +
+      '</div>' +
+      (task.description ? '<p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">'+_esc(task.description)+'</p>' : '') +
+      '<div style="font-size:13px;color:var(--text-secondary)"><strong>Assigned to:</strong> ' +
+        _esc((task.assignedUser && task.assignedUser.name) || 'Unassigned') +
+      '</div>' +
+      '<div style="font-size:13px;color:var(--text-secondary);margin-top:6px"><strong>Status:</strong> ' +
+        statusBadge(task.status) +
+      '</div>';
+
+    bootstrap.Modal.getOrCreateInstance(
+      document.getElementById('task-modal')
+    ).show();
+  }
+  window.openCard = openCard;
+
+  // ─── Filter event listeners ───────────────────────────────────────────────
+  document.getElementById('filter-search').addEventListener('input', function(e) {
+    filters.search = e.target.value;
+    renderBoard();
+  });
+  document.getElementById('filter-user').addEventListener('change', function(e) {
+    filters.user = e.target.value;
+    renderBoard();
+  });
+  document.getElementById('filter-priority').addEventListener('change', function(e) {
+    filters.priority = e.target.value;
+    renderBoard();
+  });
+  document.getElementById('filter-project').addEventListener('change', function(e) {
+    filters.project = e.target.value;
+    renderBoard();
+  });
+  document.getElementById('btn-clear-filters').addEventListener('click', function() {
+    filters = { search: '', user: '', priority: '', project: '' };
+    document.getElementById('filter-search').value  = '';
+    document.getElementById('filter-user').value     = '';
+    document.getElementById('filter-priority').value = '';
+    document.getElementById('filter-project').value  = '';
+    renderBoard();
+  });
+
+  loadKanban();
+</script>
+</body>
+</html>

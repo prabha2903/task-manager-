@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Project Detail — TaskFlow</title>
+</head>
+<body>
+<div class="app-layout">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="topbar-mount"></div>
+    <div class="page-content">
+
+      <!-- ── HEADER ──────────────────────────────────────────────────────── -->
+      <div class="card" style="margin-bottom:18px">
+        <div class="card-body">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">
+            <div>
+              <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">PROJECT</div>
+              <h2 id="project-name" style="margin:0 0 4px;font-size:22px;font-weight:700">…</h2>
+              <p id="project-description" style="margin:0;font-size:13px;color:var(--text-secondary)"></p>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap" id="header-actions">
+              <a href="projects.html" class="btn btn-secondary btn-sm">← Projects</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PROGRESS STATS ROW ───────────────────────────────────────────── -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:18px">
+        <div class="stat-card blue">  <div class="stat-value" id="s-total">…</div><div class="stat-label">Total Tasks</div></div>
+        <div class="stat-card green"> <div class="stat-value" id="s-done">…</div> <div class="stat-label">Completed</div></div>
+        <div class="stat-card orange"><div class="stat-value" id="s-prog">…</div> <div class="stat-label">In Progress</div></div>
+        <div class="stat-card red">   <div class="stat-value" id="s-blocked">…</div><div class="stat-label">Blocked</div></div>
+        <div class="stat-card purple"><div class="stat-value" id="s-pct">…</div>  <div class="stat-label">Progress</div></div>
+      </div>
+
+      <!-- ── MAIN GRID ─────────────────────────────────────────────────────── -->
+      <div style="display:grid;grid-template-columns:1fr 320px;gap:18px;align-items:start">
+
+        <!-- LEFT COLUMN -->
+        <div style="display:flex;flex-direction:column;gap:18px">
+
+          <!-- Progress ring + status breakdown -->
+          <div class="card">
+            <div class="card-header"><div class="card-header-title">📈 Progress Overview</div></div>
+            <div class="card-body" style="display:flex;gap:24px;align-items:center;flex-wrap:wrap">
+              <!-- Ring -->
+              <div style="position:relative;width:140px;height:140px;flex-shrink:0">
+                <canvas id="progress-ring" width="140" height="140"></canvas>
+                <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+                  <div style="font-size:24px;font-weight:700" id="ring-pct">0%</div>
+                  <div style="font-size:11px;color:var(--text-muted)">complete</div>
+                </div>
+              </div>
+              <!-- Status table -->
+              <div style="flex:1;min-width:180px">
+                <table style="width:100%;font-size:13px;border-collapse:collapse">
+                  <tbody id="status-breakdown">
+                    <tr><td colspan="2" style="color:var(--text-muted)">Loading…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Task table -->
+          <div class="card">
+            <div class="card-header"><div class="card-header-title">📋 Tasks</div></div>
+            <div class="table-wrapper">
+              <table>
+                <thead><tr><th>Title</th><th>Status</th><th>Priority</th><th>Assigned To</th></tr></thead>
+                <tbody id="tasks-body"><tr><td colspan="4">Loading…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Activity Feed -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-title">🕐 Activity Feed</div>
+              <button class="btn btn-secondary btn-sm" onclick="loadMoreActivity()" id="load-more-btn" style="display:none">Load more</button>
+            </div>
+            <div class="card-body" id="activity-feed">
+              <div class="loading-spinner"><div class="spinner"></div></div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div style="display:flex;flex-direction:column;gap:18px">
+
+          <!-- GitHub panel -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-title">🐙 GitHub Repository</div>
+              <div id="github-actions"></div>
+            </div>
+            <div class="card-body" id="github-panel">
+              <div class="loading-spinner"><div class="spinner"></div></div>
+            </div>
+          </div>
+
+          <!-- Team panel -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-title">🏢 Team</div>
+              <div id="team-actions"></div>
+            </div>
+            <div class="card-body" id="team-panel">
+              <div class="loading-spinner"><div class="spinner"></div></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GitHub modal -->
+<div class="modal fade" id="github-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">🐙 Link GitHub Repository</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label">GitHub Repository URL</label>
+        <input type="text" id="github-url-input" class="form-control"
+               placeholder="https://github.com/username/repository" />
+        <div style="font-size:12px;color:var(--text-muted);margin-top:6px">
+          Example: https://github.com/prabha2903/task-manager-
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="save-github-btn">Link Repository</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Assign Team modal -->
+<div class="modal fade" id="assign-team-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Assign Team to Project</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label">Select Team</label>
+        <select id="assign-team-select" class="form-select">
+          <option value="">— Select a team —</option>
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="confirm-assign-team">Assign</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/shell.js"></script>
+<script src="js/api.js"></script>
+<script src="js/toast.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/notifications.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+if (!initPage('projects','Project Detail')) throw new Error('Not authenticated');
+
+var projectId   = new URLSearchParams(location.search).get('id');
+var currentUser = Api.getUser();
+var allTeams    = [];
+var actPage     = 0;
+var actTotalPages = 1;
+var githubModal = null;
+var assignModal = null;
+
+function role() {
+  return ((currentUser?.role?.name || currentUser?.role || '') + '').toUpperCase();
+}
+function canManage() { return role()==='ADMIN' || role()==='MANAGER'; }
+function canGitHub()  { return canManage() || role()==='PROJECT_LEAD'; }
+
+// ── Load everything ───────────────────────────────────────────────────────────
+async function loadAll() {
+  var [detail, summary, teams] = await Promise.all([
+    Api.getProject(projectId),
+    Api.getProjectSummary(projectId),
+    Api.getTeams(),
+    Api.getCommits(projectId).catch(function(){return [];}),
+    Api.getPullRequests(projectId).catch(function(){return [];})
+  ]);
+  allTeams = teams || [];
+
+  if (!detail || !summary) { Toast.error('Failed to load project'); return; }
+
+  renderHeader(detail.project);
+  renderStats(summary);
+  renderRing(summary.progress);
+  renderStatusBreakdown(summary);
+  renderTaskTable(detail.tasks || []);
+  renderGitHub(detail.project, summary);
+  renderCommits(commits || []);
+  renderPullRequests(prs || []);
+  renderTeam(detail.project.assignedTeam);
+  populateTeamSelect(detail.project.assignedTeam);
+  loadActivity(true);
+}
+
+function renderHeader(p) {
+  document.getElementById('project-name').textContent = p.name;
+  document.getElementById('project-description').textContent = p.description || '';
+}
+
+function renderStats(s) {
+  document.getElementById('s-total').textContent   = s.totalTasks;
+  document.getElementById('s-done').textContent    = s.completedTasks;
+  document.getElementById('s-prog').textContent    = s.inProgressTasks;
+  document.getElementById('s-blocked').textContent = s.blockedTasks;
+  document.getElementById('s-pct').textContent     = Math.round(s.progress) + '%';
+}
+
+function renderRing(pct) {
+  var canvas  = document.getElementById('progress-ring');
+  var ctx     = canvas.getContext('2d');
+  var cx = 70, cy = 70, r = 56;
+  var start   = -Math.PI / 2;
+  var end     = start + (2 * Math.PI * pct / 100);
+  var bg      = getComputedStyle(document.documentElement).getPropertyValue('--bg-tertiary') || '#2a2f3a';
+  var fg      = '#22c55e';
+  ctx.clearRect(0,0,140,140);
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,2*Math.PI); ctx.strokeStyle=bg; ctx.lineWidth=12; ctx.stroke();
+  if (pct > 0) {
+    ctx.beginPath(); ctx.arc(cx,cy,r,start,end); ctx.strokeStyle=fg; ctx.lineWidth=12;
+    ctx.lineCap='round'; ctx.stroke();
+  }
+  document.getElementById('ring-pct').textContent = Math.round(pct) + '%';
+}
+
+function renderStatusBreakdown(s) {
+  var rows = [
+    ['📥 Backlog',     s.backlogTasks,     '#8b949e'],
+    ['🔵 In Progress', s.inProgressTasks,  '#388bfd'],
+    ['🧐 Review',      s.reviewTasks,      '#d29922'],
+    ['🧪 QA',          s.qaTasks,          '#bf8700'],
+    ['⛔ Blocked',     s.blockedTasks,     '#f85149'],
+    ['✅ Done',        s.completedTasks,   '#3fb950'],
+  ];
+  document.getElementById('status-breakdown').innerHTML = rows.map(function(r){
+    return '<tr>' +
+      '<td style="padding:4px 0;color:var(--text-secondary)">' + r[0] + '</td>' +
+      '<td style="padding:4px 0;text-align:right;font-weight:700;color:' + r[2] + '">' + r[1] + '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+function renderTaskTable(tasks) {
+  var tb = document.getElementById('tasks-body');
+  if (!tasks.length) {
+    tb.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:30px">📭 No tasks</td></tr>';
+    return;
+  }
+  tb.innerHTML = tasks.map(function(t) {
+    return '<tr onclick="location.href=\'task-detail.html?id='+t.id+'\'" style="cursor:pointer">' +
+      '<td>' + _esc(t.title) + '</td>' +
+      '<td>' + statusBadge(t.status) + '</td>' +
+      '<td>' + priorityBadge(t.priority) + '</td>' +
+      '<td>' + _esc((t.assignedUser && t.assignedUser.name) || '—') + '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+// ── GitHub panel ──────────────────────────────────────────────────────────────
+function renderGitHub(project, summary) {
+  var panel   = document.getElementById('github-panel');
+  var actions = document.getElementById('github-actions');
+
+  if (canGitHub()) {
+    actions.innerHTML =
+      '<button class="btn btn-primary btn-sm" onclick="openGitHubModal()">⚙ ' +
+        (project.githubRepoUrl ? 'Edit' : 'Link') +
+      '</button>';
+  }
+
+  if (!project.githubRepoUrl) {
+    panel.innerHTML =
+      '<div style="text-align:center;padding:20px;color:var(--text-muted)">' +
+        '<div style="font-size:32px;margin-bottom:8px">🐙</div>' +
+        '<p style="font-size:13px">No repository linked</p>' +
+        (canGitHub() ? '<button class="btn btn-primary btn-sm" onclick="openGitHubModal()">+ Link Repository</button>' : '') +
+      '</div>';
+    return;
+  }
+
+  var displayUrl = project.githubRepoUrl.replace('https://','').replace('http://','');
+  panel.innerHTML =
+    '<div style="margin-bottom:12px">' +
+      '<div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">REPOSITORY</div>' +
+      '<a href="' + project.githubRepoUrl + '" target="_blank" rel="noopener" ' +
+         'style="font-size:13px;font-weight:600;color:var(--accent-blue);word-break:break-all">' +
+        _esc(displayUrl) +
+      '</a>' +
+    '</div>' +
+    (summary.githubLinkedAt ? '<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Last linked: ' + summary.githubLinkedAt + '</div>' : '') +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+      '<a href="' + project.githubRepoUrl + '" target="_blank" rel="noopener" class="btn btn-primary btn-sm">🐙 Open GitHub</a>' +
+      (canGitHub() ? '<button class="btn btn-danger btn-sm" onclick="removeGitHub()">Remove</button>' : '') +
+    '</div>';
+}
+
+function openGitHubModal() {
+  if (!githubModal) githubModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('github-modal'));
+  githubModal.show();
+}
+window.openGitHubModal = openGitHubModal;
+
+document.getElementById('save-github-btn').addEventListener('click', async function() {
+  var url = document.getElementById('github-url-input').value.trim();
+  if (!url) { Toast.error('Please enter a GitHub repository URL'); return; }
+  var btn = this; btn.disabled=true; btn.textContent='Saving…';
+  var r = await Api.linkGitHub(projectId, url);
+  btn.disabled=false; btn.textContent='Link Repository';
+  if (r) { Toast.success('Repository linked!'); githubModal.hide(); loadAll(); }
+  else    { Toast.error('Invalid URL or server error'); }
+});
+
+async function removeGitHub() {
+  if (!confirm('Remove the linked GitHub repository?')) return;
+  var r = await Api.removeGitHub(projectId);
+  if (r !== null) { Toast.success('Repository removed'); loadAll(); }
+}
+window.removeGitHub = removeGitHub;
+
+// ── Team panel ────────────────────────────────────────────────────────────────
+function renderTeam(team) {
+  var panel   = document.getElementById('team-panel');
+  var actions = document.getElementById('team-actions');
+
+  if (canManage()) {
+    actions.innerHTML = '<button class="btn btn-primary btn-sm" onclick="openAssignModal()">⚙ Change</button>';
+  }
+
+  if (!team) {
+    panel.innerHTML =
+      '<div style="text-align:center;padding:20px;color:var(--text-muted)">' +
+        '<div style="font-size:32px;margin-bottom:8px">🏢</div>' +
+        '<p style="font-size:13px">No team assigned</p>' +
+        (canManage() ? '<button class="btn btn-primary btn-sm" onclick="openAssignModal()">+ Assign Team</button>' : '') +
+      '</div>';
+    return;
+  }
+
+  var leadHtml = team.teamLead
+    ? '<div style="display:flex;align-items:center;gap:10px;padding:8px 0">' +
+        '<div style="width:34px;height:34px;border-radius:50%;background:var(--accent-blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px">' +
+          getInitials(team.teamLead.name) +
+        '</div>' +
+        '<div><div style="font-size:13px;font-weight:600">' + _esc(team.teamLead.name) + '</div>' +
+        '<div style="font-size:11px;color:var(--text-muted)">' + _esc(team.teamLead.email) + '</div></div>' +
+      '</div>'
+    : '<div style="color:var(--text-muted);font-size:13px">No lead</div>';
+
+  var memberAvatars = team.members && team.members.length
+    ? team.members.slice(0,5).map(function(m){
+        return '<div title="'+_esc(m.name)+'" style="width:30px;height:30px;border-radius:50%;background:var(--bg-tertiary);border:2px solid var(--bg-card);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;margin-left:-8px">'+getInitials(m.name)+'</div>';
+      }).join('')
+    : '<span style="font-size:13px;color:var(--text-muted)">No members</span>';
+
+  panel.innerHTML =
+    '<div style="font-size:15px;font-weight:700;margin-bottom:10px">🏢 '+_esc(team.name)+'</div>' +
+    '<div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Team Lead</div>' +
+    leadHtml +
+    '<div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:10px">Members ('+(team.members?team.members.length:0)+')</div>' +
+    '<div style="display:flex;align-items:center;padding-left:8px">'+memberAvatars+'</div>' +
+    '<div style="margin-top:14px">' +
+      '<a href="teams.html" class="btn btn-secondary btn-sm w-100">View Team →</a>' +
+    '</div>';
+}
+
+function populateTeamSelect(currentTeam) {
+  var sel = document.getElementById('assign-team-select');
+  sel.innerHTML = '<option value="">— Select a team —</option>' +
+    allTeams.map(function(t){
+      return '<option value="'+t.id+'"'+(currentTeam&&currentTeam.id===t.id?' selected':'')+'>'+_esc(t.name)+'</option>';
+    }).join('');
+}
+
+function openAssignModal() {
+  if (!assignModal) assignModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('assign-team-modal'));
+  assignModal.show();
+}
+window.openAssignModal = openAssignModal;
+
+document.getElementById('confirm-assign-team').addEventListener('click', async function() {
+  var teamId = document.getElementById('assign-team-select').value;
+  if (!teamId) { Toast.error('Please select a team'); return; }
+  var btn=this; btn.disabled=true; btn.textContent='Assigning…';
+  var r = await Api.assignTeamToProject(projectId, teamId);
+  btn.disabled=false; btn.textContent='Assign';
+  if (r) { Toast.success('Team assigned!'); assignModal.hide(); loadAll(); }
+});
+
+// ── Activity feed ─────────────────────────────────────────────────────────────
+async function loadActivity(reset) {
+  if (reset) { actPage=0; actTotalPages=1; document.getElementById('activity-feed').innerHTML=''; }
+  if (actPage >= actTotalPages) return;
+
+  var data = await Api.getProjectActivities(projectId, actPage, 15);
+  if (!data) return;
+
+  actTotalPages = data.totalPages;
+  var items = data.content || [];
+  var feed  = document.getElementById('activity-feed');
+
+  if (actPage===0 && !items.length) {
+    feed.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted)">No activity yet</div>';
+    return;
+  }
+
+  items.forEach(function(a) {
+    var div = document.createElement('div');
+    div.style.cssText = 'display:flex;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border-color)';
+    var initials = getInitials((a.user && a.user.name) || 'U');
+    div.innerHTML =
+      '<div style="width:34px;height:34px;border-radius:50%;background:var(--accent-blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0">'+initials+'</div>'+
+      '<div style="flex:1">'+
+        '<div style="font-size:13px;color:var(--text-primary)">'+_esc(a.detail||a.action||'Activity')+'</div>'+
+        '<div style="font-size:11px;color:var(--text-muted);margin-top:3px">'+timeAgo(a.timestamp)+'</div>'+
+      '</div>';
+    feed.appendChild(div);
+  });
+
+  actPage++;
+  document.getElementById('load-more-btn').style.display = actPage < actTotalPages ? 'block' : 'none';
+}
+
+function loadMoreActivity() { loadActivity(false); }
+window.loadMoreActivity = loadMoreActivity;
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadAll();
+</script>
+</body>
+</html>
