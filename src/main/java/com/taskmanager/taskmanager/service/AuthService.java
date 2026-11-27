@@ -35,10 +35,14 @@ public class AuthService {
 
         RoleType roleType;
 
-        if (request.getRole() == null || request.getRole().isBlank()) {
-            roleType = RoleType.DEVELOPER; // ✅ default role
+         String requested = request.getRole() == null ? "" : request.getRole().trim().toUpperCase();
+
+        if (userRepository.count() == 0) {
+            roleType = RoleType.ADMIN;            // the very first account becomes Admin
+        } else if ("PROJECT_LEAD".equals(requested)) {
+            roleType = RoleType.PROJECT_LEAD;     // allowed at sign-up
         } else {
-            roleType = RoleType.valueOf(request.getRole().toUpperCase());
+            roleType = RoleType.DEVELOPER;        // everything else is Developer
         }
 
         Role role = roleRepository
