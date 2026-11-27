@@ -1,4 +1,4 @@
-// ============================================================
+  // ============================================================
 // utils.js — Shared utilities, sidebar, topbar, auth guards
 // ============================================================
 
@@ -84,10 +84,10 @@ function renderTopbar(title, actions) {
     '  <h1 class="topbar-title">' + title + '</h1>',
     '  <div class="topbar-actions">',
      actions,
-'    <button id="global-search-input" class="form-control form-control-sm" placeholder="🔍 Search tasks…" style="width:200px;border-radius:20px" onkeydown="if(event.key==='Enter' && this.value.trim()) window.location.href='search.html?q='+encodeURIComponent(this.value.trim())" />
-          <button id="theme-toggle" class="btn btn-secondary btn-icon" title="Toggle Theme">🌙</button>',
-     '<div class="shortcut-hint">⌨ N • K • / • ESC</div>',
-'    <div style="position:relative">',
+    '    <input id="global-search-input" class="form-control form-control-sm" placeholder="🔍 Search tasks…" style="width:200px;border-radius:20px" onkeydown="if(event.key===\'Enter\' && this.value.trim()) window.location.href=\'search.html?q=\'+encodeURIComponent(this.value.trim())" />',
+    '    <button id="theme-toggle" class="btn btn-secondary btn-icon" title="Toggle Theme">🌙</button>',
+    '    <div class="shortcut-hint">⌨ N • K • / • ESC</div>',
+    '    <div style="position:relative">',
     '      <button class="notif-btn" id="notif-btn" title="Notifications">',
     '        🔔',
     '        <span class="notif-badge" id="notif-badge">0</span>',
