@@ -1,4 +1,4 @@
-const API_BASE = 'https://task-manager-pj2c.onrender.com/api';
+const API_BASE = '/api';
 
 const Api = {
   // -----------------------------------------------------------

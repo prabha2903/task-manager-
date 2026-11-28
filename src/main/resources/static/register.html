@@ -65,7 +65,7 @@
     <option value="DEVELOPER">Developer</option>
     <option value="MANAGER">Manager</option>
     <option value="ADMIN">Admin</option>
-    <option value="PROJECT_LEAD">Project Lead</option>
+    <option value="PROJECT_LEAD">Project Lead</option>  
   </select>
 </div>
     <button class="btn btn-primary btn-lg w-100" id="register-btn">Create Account</button>
@@ -78,7 +78,7 @@
 </div>
 
 <script>
-var API_BASE = 'https://task-manager-pj2c.onrender.com/api';
+var API_BASE = '/api';
 var Api = {
   getToken: function(){ return localStorage.getItem('jwt_token'); },
   isAuthenticated: function(){ return !!this.getToken(); },
