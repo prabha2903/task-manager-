@@ -9,11 +9,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-
 import java.net.URI;
 import java.net.http.*;
 import java.util.*;
-
+import java.time.Duration;
 /**
  * AI-assisted task assignment suggestions using Gemini API.
  * AI NEVER auto-assigns — all suggestions require human approval.
@@ -23,12 +22,18 @@ import java.util.*;
 @Slf4j
 public class AiAssignmentService {
 
-    @Value("${AI_API_KEY:}")
+    @Value("${ai.api.key:}")
     private String apiKey;
-    private static final String GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+    @Value("${AI_MODEL:gemini-3.5-flash-lite}")
+    private String model;
 
+    private String geminiUrl() {
+        return "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent";
+    }
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
 
     public boolean isEnabled() {
         return apiKey != null && !apiKey.isBlank();
@@ -92,8 +97,10 @@ public class AiAssignmentService {
                         "parts", List.of(Map.of("text", prompt))))));
 
         HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(GEMINI_URL + "?key=" + apiKey))
+                .uri(URI.create(geminiUrl()))
+                .timeout(Duration.ofSeconds(30))
                 .header("Content-Type", "application/json")
+                .header("x-goog-api-key", apiKey)
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
 
