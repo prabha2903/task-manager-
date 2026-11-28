@@ -23,14 +23,12 @@ import java.util.*;
 @Slf4j
 public class AiAssignmentService {
 
-    @Value("${ai.api.key:}")
+    @Value("${AI_API_KEY:}")
     private String apiKey;
-
-    private static final String GEMINI_URL =
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+    private static final String GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final HttpClient   httpClient   = HttpClient.newHttpClient();
+    private final HttpClient httpClient = HttpClient.newHttpClient();
 
     public boolean isEnabled() {
         return apiKey != null && !apiKey.isBlank();
@@ -38,17 +36,18 @@ public class AiAssignmentService {
 
     /**
      * Generate task assignment suggestions.
-     * Returns a list of {taskId, taskTitle, suggestedUserId, suggestedUserName, reason}
+     * Returns a list of {taskId, taskTitle, suggestedUserId, suggestedUserName,
+     * reason}
      * The caller (Manager/ProjectLead) must explicitly approve each suggestion.
      */
     public List<Map<String, Object>> suggestAssignments(List<Task> tasks, List<User> teamMembers) {
         if (!isEnabled()) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
-                "AI service is not configured. Please set AI_API_KEY environment variable.");
+                    "AI service is not configured. Please set AI_API_KEY environment variable.");
         }
         if (tasks.isEmpty() || teamMembers.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                "Need at least one task and one team member to generate suggestions.");
+                    "Need at least one task and one team member to generate suggestions.");
         }
 
         String prompt = buildPrompt(tasks, teamMembers);
@@ -61,40 +60,36 @@ public class AiAssignmentService {
         } catch (Exception e) {
             log.error("AI assignment suggestion failed: {}", e.getMessage());
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
-                "AI service temporarily unavailable. Please try again or assign manually.");
+                    "AI service temporarily unavailable. Please try again or assign manually.");
         }
     }
 
     private String buildPrompt(List<Task> tasks, List<User> members) {
         StringBuilder sb = new StringBuilder();
-        sb.append("You are a project manager assistant. Suggest which team member should be assigned to each task.\n\n");
+        sb.append(
+                "You are a project manager assistant. Suggest which team member should be assigned to each task.\n\n");
         sb.append("TEAM MEMBERS:\n");
-        members.forEach(m ->
-            sb.append("- ID:").append(m.getId())
-              .append(" Name:").append(m.getName())
-              .append(" Role:").append(m.getRole() != null ? m.getRole().getName() : "DEVELOPER")
-              .append("\n")
-        );
+        members.forEach(m -> sb.append("- ID:").append(m.getId())
+                .append(" Name:").append(m.getName())
+                .append(" Role:").append(m.getRole() != null ? m.getRole().getName() : "DEVELOPER")
+                .append("\n"));
         sb.append("\nTASKS:\n");
-        tasks.forEach(t ->
-            sb.append("- ID:").append(t.getId())
-              .append(" Title:").append(t.getTitle())
-              .append(" Priority:").append(t.getPriority())
-              .append(" Status:").append(t.getStatus())
-              .append("\n")
-        );
+        tasks.forEach(t -> sb.append("- ID:").append(t.getId())
+                .append(" Title:").append(t.getTitle())
+                .append(" Priority:").append(t.getPriority())
+                .append(" Status:").append(t.getStatus())
+                .append("\n"));
         sb.append("\nRespond ONLY with a JSON array. Example:\n");
-        sb.append("[{\"taskId\":1,\"userId\":2,\"reason\":\"Best suited based on role\"},{\"taskId\":3,\"userId\":4,\"reason\":\"Available capacity\"}]\n");
+        sb.append(
+                "[{\"taskId\":1,\"userId\":2,\"reason\":\"Best suited based on role\"},{\"taskId\":3,\"userId\":4,\"reason\":\"Available capacity\"}]\n");
         sb.append("Only include tasks that should be reassigned. Do not include tasks that are DONE.");
         return sb.toString();
     }
 
     private String callGemini(String prompt) throws Exception {
         String requestBody = objectMapper.writeValueAsString(Map.of(
-            "contents", List.of(Map.of(
-                "parts", List.of(Map.of("text", prompt))
-            ))
-        ));
+                "contents", List.of(Map.of(
+                        "parts", List.of(Map.of("text", prompt))))));
 
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(GEMINI_URL + "?key=" + apiKey))
@@ -111,8 +106,8 @@ public class AiAssignmentService {
 
         JsonNode root = objectMapper.readTree(resp.body());
         return root.path("candidates").get(0)
-                   .path("content").path("parts").get(0)
-                   .path("text").asText();
+                .path("content").path("parts").get(0)
+                .path("text").asText();
     }
 
     private List<Map<String, Object>> parseResponse(String text, List<Task> tasks, List<User> members) {
@@ -120,12 +115,13 @@ public class AiAssignmentService {
         try {
             // Extract JSON array from response (Gemini sometimes adds markdown)
             int start = text.indexOf('[');
-            int end   = text.lastIndexOf(']');
-            if (start < 0 || end < 0) throw new RuntimeException("No JSON array in response");
+            int end = text.lastIndexOf(']');
+            if (start < 0 || end < 0)
+                throw new RuntimeException("No JSON array in response");
             String json = text.substring(start, end + 1);
 
             JsonNode arr = objectMapper.readTree(json);
-            Map<Long, Task> taskMap   = new HashMap<>();
+            Map<Long, Task> taskMap = new HashMap<>();
             Map<Long, User> memberMap = new HashMap<>();
             tasks.forEach(t -> taskMap.put(t.getId(), t));
             members.forEach(m -> memberMap.put(m.getId(), m));
@@ -140,12 +136,11 @@ public class AiAssignmentService {
 
                 if (t != null && u != null) {
                     result.add(Map.of(
-                        "taskId",            t.getId(),
-                        "taskTitle",         t.getTitle(),
-                        "suggestedUserId",   u.getId(),
-                        "suggestedUserName", u.getName(),
-                        "reason",            reason
-                    ));
+                            "taskId", t.getId(),
+                            "taskTitle", t.getTitle(),
+                            "suggestedUserId", u.getId(),
+                            "suggestedUserName", u.getName(),
+                            "reason", reason));
                 }
             }
         } catch (Exception e) {
