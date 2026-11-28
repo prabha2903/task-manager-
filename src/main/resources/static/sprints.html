@@ -281,7 +281,7 @@ document.getElementById('save-sprint-btn').addEventListener('click', async funct
   if (!start) { Toast.error('Start date is required'); return; }
   if (!end)   { Toast.error('End date is required'); return; }
   if (end < start) { Toast.error('End date must be after start date'); return; }
-
+  if (!editingSprintId && !selectedProject) { Toast.error('Select a project first'); return; }
   var btn = this; btn.disabled=true; btn.textContent='Saving…';
 
   var payload = { name, goal: goal||null, startDate: start, endDate: end };
